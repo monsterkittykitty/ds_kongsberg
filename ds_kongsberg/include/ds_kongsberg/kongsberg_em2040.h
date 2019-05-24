@@ -37,7 +37,7 @@
 #include <ds_base/ds_process.h>
 
 #include <ds_core_msgs/RawData.h>
-//#include "EM_datagrams/EMdgmFormat.h"
+#include "../../src/EM_datagrams/EMdgmFormat.h"
 #include <sensor_msgs/Image.h>
 
 #include "ds_kongsberg_msgs/PingCmd.h"
@@ -62,12 +62,13 @@ class KongsbergEM2040 : public ds_base::DsProcess {
   KongsbergEM2040(int argc, char* argv[], const std::string& name);
   ~KongsbergEM2040() override;
 
-//  void parse_message(ds_core_msgs::RawData& raw);
-//
-//  static EMdgmMRZ read_mrz(uint8_t* bytes);
+  static bool parse_data(ds_core_msgs::RawData& raw);
+  static bool parse_message(ds_core_msgs::RawData& raw);
+
+  static EMdgmMRZ read_mrz(uint8_t* bytes, int max_length);
 //  static EMdgmMWC read_mwc(uint8_t* bytes);
 //
-//  static ds_multibeam_msgs::MultibeamRaw mrz_to_mb_raw(EMdgmMRZ* msg);
+  static ds_multibeam_msgs::MultibeamRaw mrz_to_mb_raw(EMdgmMRZ* msg);
 //  static ds_multibeam_msgs::MultibeamGrid mb_raw_to_mb_grid(ds_multibeam_msgs::MultibeamRaw* msg);
 //  static ds_multibeam_msgs::MultibeamGridStats mb_raw_to_mb_grid_stats(ds_multibeam_msgs::MultibeamRaw* msg);
 //  static ds_multibeam_msgs::MultibeamFilterStats mb_raw_to_mb_filter_stats(ds_multibeam_msgs::MultibeamRaw* msg);
@@ -84,8 +85,8 @@ class KongsbergEM2040 : public ds_base::DsProcess {
   bool _ping_cmd(ds_kongsberg_msgs::PingCmd::Request req, ds_kongsberg_msgs::PingCmd::Response res);
   bool _power_cmd(ds_kongsberg_msgs::PowerCmd::Request req, ds_kongsberg_msgs::PowerCmd::Response res);
   bool _settings_cmd(ds_kongsberg_msgs::SettingsCmd::Request req, ds_kongsberg_msgs::SettingsCmd::Response res);
-  void onKMallData(ds_core_msgs::RawData raw);
-  void onKctrlData(ds_core_msgs::RawData raw);
+  void _on_kmall_data(ds_core_msgs::RawData raw);
+  void _on_kctrl_data(ds_core_msgs::RawData raw);
 
   std::unique_ptr<KongsbergEM2040Private> d_ptr_;
 };

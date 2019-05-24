@@ -50,95 +50,150 @@ KongsbergEM2040::KongsbergEM2040(int argc, char* argv[], const std::string& name
 
 KongsbergEM2040::~KongsbergEM2040() = default;
 
-//void
-//KongsbergEM2040::parse_message(ds_core_msgs::RawData& raw)
-//{
-//  int min_size = sizeof(EMdgmHeader);
-//  if (raw.data.size() < min_size){
-//    ROS_ERROR_STREAM("Raw Data received less than minimum size "<<min_size<<" bytes");
-//    return;
-//  }
-//  uint8_t* bytes_ptr = raw.data.data();
-//  auto hdr = reinterpret_cast<EMdgmHeader*>(bytes_ptr);
-//  if (raw.data.size() != hdr->numBytesDgm){
-//    ROS_ERROR_STREAM("Raw Data size received ("<<raw.data.size()<<") != hdr->numBytes ("<<hdr.numBytesDgm<<")");
-//    return;
-//  }
-//  if (hdr.dgmType==EM_DGM_I_INSTALLATION_PARAM){
-//    ROS_INFO_STREAM("EM_DGM_I_INSTALLATION_PARAM");
-//  } else if (hdr.dgmType==EM_DGM_I_OP_RUNTIME){
-//    ROS_INFO_STREAM("EM_DGM_I_OP_RUNTIME");
-//  } else if (hdr.dgmType==EM_DGM_S_POSITION){
-//    ROS_INFO_STREAM("EM_DGM_S_POSITION");
-//  } else if (hdr.dgmType==EM_DGM_S_KM_BINARY){
-//    ROS_INFO_STREAM("EM_DGM_S_KM_BINARY");
-//  } else if (hdr.dgmType==EM_DGM_S_SOUND_VELOCITY_PROFILE){
-//    ROS_INFO_STREAM("EM_DGM_S_SOUND_VELOCITY_PROFILE");
-//  } else if (hdr.dgmType==EM_DGM_S_SOUND_VELOCITY_TRANSDUCER){
-//    ROS_INFO_STREAM("EM_DGM_S_SOUND_VELOCITY_TRANSDUCER");
-//  } else if (hdr.dgmType==EM_DGM_S_CLOCK){
-//    ROS_INFO_STREAM("EM_DGM_S_CLOCK");
-//  } else if (hdr.dgmType==EM_DGM_S_DEPTH){
-//    ROS_INFO_STREAM("EM_DGM_S_DEPTH");
-//  } else if (hdr.dgmType==EM_DGM_S_HEIGHT){
-//    ROS_INFO_STREAM("EM_DGM_S_HEIGHT");
-//  } else
-//  if (hdr.dgmType==EM_DGM_M_RANGE_AND_DEPTH){
-//    ROS_INFO_STREAM("EM_DGM_M_RANGE_AND_DEPTH");
-//    auto mrz = read_mrz(bytes_ptr);
-////    auto mrz = reinterpret_cast<EMdgmMRZ*>(bytes_ptr);
-//    auto mb_raw = mrz_to_mb_raw(mrz);
-//  } else if (hdr.dgmType==EM_DGM_M_WATER_COLUMN){
-//    ROS_INFO_STREAM("EM_DGM_M_WATER_COLUMN");
-//
-//  } else if (hdr.dgmType==EM_DGM_C_POSITION){
-//    ROS_INFO_STREAM("EM_DGM_C_POSITION");
-//  } else if (hdr.dgmType==EM_DGM_C_HEAVE){
-//    ROS_INFO_STREAM("EM_DGM_C_HEAVE");
-//  }
-//}
+bool
+KongsbergEM2040::parse_message(ds_core_msgs::RawData& raw)
+{
+  return true;
+}
 
-//EMdgmMRZ read_mrz(uint8_t* bytes)
-//{
-//  EMdgmMRZ mrz;
-//  int count = 0;
-//  uint8_t* ptr = bytes;
-//  mrz.header = *(reinterpret_cast<EMdgmHeader*>(ptr + count));
-//  count += sizeof(mrz.header);
-//  mrz.partition = *(reinterpret_cast<EMdgmpartition*>(ptr + count));
-//  count += sizeof(mrz.partition);
-//  mrz.cmnPart = *(reinterpret_cast<EMdgmMbody*>(ptr + count));
-//  count += mrz.cmnPart.numBytesCmnPart;
-//  mrz.pingInfo = *(reinterpret_cast<EMdgmMRZ_pingInfo*>(ptr + count));
-//  count += mrz.pingInfo.numBytesInfoData;
-//
-//  for (int i=0; i<MAX_NUM_TX_PULSES; i++){
-//    mrz.sectorInfo[i] = *(reinterpret_cast<EMdgmMRZ_pingInfo*>(ptr + count));
-//    count += sizeof(mrz.sectorInfo[i]);
-//  }
-//
-//  mrz.rxInfo = *(reinterpret_cast<EMdgmMRZ_rxInfo*>(ptr + count));
-//  count += mrz.pingInfo.numBytesRxInfo;
-//  for (i=0; i<MAX_EXTRA_DET_CLASSES; i++){
-//    mrz.extraDetClassInfo[i] = *(reinterpret_cast<EMdgmMRZ_extraDetClassInfo*>(ptr + count));
-//    count += sizeof(mrz.extraDetClassInfo[i]);
-//  }
-//  for (i=0; i<MAX_NUM_BEAMS+MAX_EXTRA_DET; i++){
-//    mrz.sounding[i] = *(reinterpret_cast<EMdgmMRZ_sounding*>(ptr + count));
-//    count += sizeof(mrz.sounding[i]);
-//  }
-//  for (i=0; i<MAX_SIDESCAN_SAMP; i++){
-//    mrz.SIsample_desidB[i] = *(reinterpret_cast<uint16_t*>(ptr + count));;
-//  }
-//
-//
-//
-//  return mrz;
-//}
+bool
+KongsbergEM2040::parse_data(ds_core_msgs::RawData& raw)
+{
+  int data_size = raw.data.size();
+  int min_size = sizeof(EMdgmHeader);
+  if (data_size < min_size){
+    ROS_ERROR_STREAM("Raw Data received less than minimum size "<<min_size<<" bytes");
+    return false;
+  }
+  uint8_t* bytes_ptr = raw.data.data();
+  auto hdr = reinterpret_cast<EMdgmHeader*>(bytes_ptr);
+  if (data_size != hdr->numBytesDgm){
+    ROS_ERROR_STREAM("Raw Data size received ("<<data_size<<") != hdr->numBytes ("<<hdr->numBytesDgm<<")");
+//    return false;
+  }
 
-//ds_multibeam_msgs::MultibeamRaw
-//KongsbergEM2040::mrz_to_mb_raw(EMdgmMRZ* msg)
-//{
+  std::string msg_type(hdr->dgmType, hdr->dgmType + sizeof(hdr->dgmType)/sizeof(hdr->dgmType[0]));
+  if (msg_type==EM_DGM_I_INSTALLATION_PARAM) {
+      ROS_INFO_STREAM("EM_DGM_I_INSTALLATION_PARAM");
+    }
+  else if (msg_type==EM_DGM_I_OP_RUNTIME){
+      ROS_INFO_STREAM("EM_DGM_I_OP_RUNTIME");
+    }
+  else if (msg_type==EM_DGM_S_POSITION){
+      ROS_INFO_STREAM("EM_DGM_S_POSITION");
+    }
+  else if (msg_type==EM_DGM_S_KM_BINARY){
+      ROS_INFO_STREAM("EM_DGM_S_KM_BINARY");
+    }
+  else if (msg_type==EM_DGM_S_SOUND_VELOCITY_PROFILE){
+      ROS_INFO_STREAM("EM_DGM_S_SOUND_VELOCITY_PROFILE");
+    }
+  else if (msg_type==EM_DGM_S_SOUND_VELOCITY_TRANSDUCER){
+      ROS_INFO_STREAM("EM_DGM_S_SOUND_VELOCITY_TRANSDUCER");
+    }
+  else if (msg_type==EM_DGM_S_CLOCK){
+      ROS_INFO_STREAM("EM_DGM_S_CLOCK");
+    }
+  else if (msg_type==EM_DGM_S_DEPTH){
+      ROS_INFO_STREAM("EM_DGM_S_DEPTH");
+    }
+  else if (msg_type==EM_DGM_S_HEIGHT){
+      ROS_INFO_STREAM("EM_DGM_S_HEIGHT");
+    }
+  else if (msg_type==EM_DGM_M_RANGE_AND_DEPTH){
+      ROS_INFO_STREAM("EM_DGM_M_RANGE_AND_DEPTH");
+      auto mrz = read_mrz(bytes_ptr, data_size);
+      return true;
+    }
+  else if (msg_type==EM_DGM_M_WATER_COLUMN){
+      ROS_INFO_STREAM("EM_DGM_M_WATER_COLUMN");
+    }
+  else if (msg_type==EM_DGM_C_POSITION){
+      ROS_INFO_STREAM("EM_DGM_C_POSITION");
+    }
+  else if (msg_type==EM_DGM_C_HEAVE){
+      ROS_INFO_STREAM("EM_DGM_C_HEAVE");
+    }
+  ROS_ERROR_STREAM("TYPE : " << msg_type << " NOT PARSED");
+  return false;
+}
+
+EMdgmMRZ
+KongsbergEM2040::read_mrz(uint8_t* ptr, int max_length)
+{
+  EMdgmMRZ mrz;
+  int count = 0;
+
+  mrz.header = *(reinterpret_cast<EMdgmHeader*>(ptr + count));
+  count += sizeof(mrz.header);
+  if (count>max_length){
+    ROS_ERROR_STREAM("*After header* In read_mrz, count="<<count<<" exceeded max_length="<<max_length);
+    return {};
+  }
+  mrz.partition = *(reinterpret_cast<EMdgmMpartition*>(ptr + count));
+  count += sizeof(mrz.partition);
+  if (count>max_length){
+    ROS_ERROR_STREAM("*After partition* In read_mrz, count="<<count<<" exceeded max_length="<<max_length);
+    return {};
+  }
+  mrz.cmnPart = *(reinterpret_cast<EMdgmMbody*>(ptr + count));
+  count += mrz.cmnPart.numBytesCmnPart;
+  if (count>max_length){
+    ROS_ERROR_STREAM("*After Common Part* In read_mrz, count="<<count<<" exceeded max_length="<<max_length);
+    return {};
+  }
+  mrz.pingInfo = *(reinterpret_cast<EMdgmMRZ_pingInfo*>(ptr + count));
+  count += mrz.pingInfo.numBytesInfoData;
+  if (count>max_length){
+    ROS_ERROR_STREAM("*After Ping Info* In read_mrz, count="<<count<<" exceeded max_length="<<max_length);
+    return {};
+  }
+  for (int i=0; i<MAX_NUM_TX_PULSES; i++){
+    mrz.sectorInfo[i] = *(reinterpret_cast<EMdgmMRZ_txSectorInfo*>(ptr + count));
+    count += sizeof(mrz.sectorInfo[i]);
+    if (count>max_length){
+      ROS_ERROR_STREAM("*After Sector["<<i<<"]* In read_mrz, count="<<count<<" exceeded max_length="<<max_length);
+      return {};
+    }
+  }
+  mrz.rxInfo = *(reinterpret_cast<EMdgmMRZ_rxInfo*>(ptr + count));
+  count += mrz.rxInfo.numBytesRxInfo;
+  if (count>max_length){
+    ROS_ERROR_STREAM("*After RXInfo* In read_mrz, count="<<count<<" exceeded max_length="<<max_length);
+    return {};
+  }
+  for (int i=0; i<MAX_EXTRA_DET_CLASSES; i++){
+    mrz.extraDetClassInfo[i] = *(reinterpret_cast<EMdgmMRZ_extraDetClassInfo*>(ptr + count));
+    count += sizeof(mrz.extraDetClassInfo[i]);
+    if (count>max_length){
+      ROS_ERROR_STREAM("*After Extra Det["<<i<<"]* In read_mrz, count="<<count<<" exceeded max_length="<<max_length);
+      return {};
+    }
+  }
+  for (int i=0; i<MAX_NUM_BEAMS+MAX_EXTRA_DET; i++){
+    mrz.sounding[i] = *(reinterpret_cast<EMdgmMRZ_sounding*>(ptr + count));
+    count += sizeof(mrz.sounding[i]);
+    if (count>max_length){
+      ROS_ERROR_STREAM("*After sounding["<<i<<"]* In read_mrz, count="<<count<<" exceeded max_length="<<max_length);
+      return {};
+    }
+  }
+  for (int i=0; i<MAX_SIDESCAN_SAMP; i++){
+    mrz.SIsample_desidB[i] = *(reinterpret_cast<uint16_t*>(ptr + count));
+    count += sizeof(uint16_t);
+    if (count>max_length){
+      ROS_ERROR_STREAM("*After SI Samp["<<i<<"]* In read_mrz, count="<<count<<" exceeded max_length="<<max_length);
+      return {};
+    }
+  }
+  ROS_INFO_STREAM("Success! MRZ read completely");
+  return mrz;
+}
+
+ds_multibeam_msgs::MultibeamRaw
+KongsbergEM2040::mrz_to_mb_raw(EMdgmMRZ* msg)
+{
+  return {};
 ////  struct EMdgmHeader_def 	header
 ////  struct EMdgmMpartition_def 	partition
 ////  struct EMdgmMbody_def 	cmnPart
@@ -326,15 +381,15 @@ KongsbergEM2040::~KongsbergEM2040() = default;
 //KongsbergEM2040::mwc_to_image(EMdgmMWC* msg)
 //{
 //
-//}
+}
 
 void
 KongsbergEM2040::setupConnections()
 {
   ds_base::DsProcess::setupConnections();
   DS_D(KongsbergEM2040);
-  d->kmall_conn_ = addConnection("kmall_connection", boost::bind(&KongsbergEM2040::onKMallData, this, _1));
-  d->kctrl_conn_ = addConnection("kctrl_connection", boost::bind(&KongsbergEM2040::onKctrlData, this, _1));
+  d->kmall_conn_ = addConnection("kmall_connection", boost::bind(&KongsbergEM2040::_on_kmall_data, this, _1));
+  d->kctrl_conn_ = addConnection("kctrl_connection", boost::bind(&KongsbergEM2040::_on_kctrl_data, this, _1));
 }
 
 void
@@ -370,14 +425,11 @@ void
 KongsbergEM2040::setupSubscriptions()
 {
   ds_base::DsProcess::setupSubscriptions();
-//  DS_D(KongsbergEM2040);
-
 }
 void
 KongsbergEM2040::setupPublishers()
 {
   ds_base::DsProcess::setupPublishers();
-//  DS_D(KongsbergEM2040);
 }
 
 bool
@@ -405,17 +457,19 @@ KongsbergEM2040::_settings_cmd(ds_kongsberg_msgs::SettingsCmd::Request req, ds_k
 }
 
 void
-KongsbergEM2040::onKMallData(ds_core_msgs::RawData raw)
+KongsbergEM2040::_on_kmall_data(ds_core_msgs::RawData raw)
 {
+  parse_data(raw);
   DS_D(KongsbergEM2040);
   d->kctrl_conn_->send("RECEIVED KMALL DATA");
 }
 
 void
-KongsbergEM2040::onKctrlData(ds_core_msgs::RawData raw)
+KongsbergEM2040::_on_kctrl_data(ds_core_msgs::RawData raw)
 {
+  parse_message(raw);
   DS_D(KongsbergEM2040);
-  d->kctrl_conn_->send("RECEIVED KCTRL DATA");
+  d->kctrl_conn_->send("RECEIVED KCTRL MSG");
 }
 
 } //namespace

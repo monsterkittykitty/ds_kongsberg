@@ -1,14 +1,20 @@
 kongsberg:
+
   kmall_connection:
     type: "UDP"
-    udp_rx: 5002
+    udp_rx: 5003
     udp_address: "127.0.0.1"
-    udp_tx: 15002
+    udp_tx: 15003
   kctrl_connection:
     type: "UDP"
     udp_rx: 4002
     udp_address: "127.0.0.1"
     udp_tx: 14002
+##  tcp_connection:
+#    type: "TCP"
+#    tcp_rx: 1005
+#    tcp_address: "127.0.0.1"
+#    tcp_tx: 11005
   sounder_name: SENTRY_SOUNDER
   # custom kongsberg services
   ping_service: ping_cmd

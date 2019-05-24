@@ -1,6 +1,6 @@
 <launch>
     <group ns="mission">
-        <rosparam command="load" file="kongsberg.yaml"/>
+        <rosparam command="load" file="$(find ds_kongsberg)/launch/kongsberg.yaml"/>
         <node name="kongsberg" pkg="ds_kongsberg" type="ds_kongsberg_node"/>
     </group>
 </launch>
