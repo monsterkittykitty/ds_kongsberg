@@ -13,18 +13,19 @@ find_package(catkin REQUIRED COMPONENTS
         ds_base
         ds_core_msgs
         ds_kongsberg_msgs
+        ds_multibeam_msgs
         )
 
 find_package(ClangFormat)
 if(CLANG_FORMAT_FOUND)
-    add_custom_target(clang-format-sentry-mc
+    add_custom_target(clang-format-ds_kongsberg
             COMMENT
             "Run clang-format on all project C++ sources"
             WORKING_DIRECTORY
             ${PROJECT_SOURCE_DIR}
             COMMAND
             find src
-            include/sentry_mc
+            include/ds_kongsberg
             -iname '*.h' -o -iname '*.cpp'
             | xargs ${CLANG_FORMAT_EXECUTABLE} -i
             )
@@ -33,7 +34,7 @@ endif(CLANG_FORMAT_FOUND)
 catkin_package(
         INCLUDE_DIRS include
         LIBRARIES ds_kongsberg
-        CATKIN_DEPENDS ds_base ds_core_msgs
+        CATKIN_DEPENDS ds_base ds_core_msgs ds_kongsberg_msgs ds_multibeam_msgs
 )
 
 ## System dependencies are found with CMake's conventions
@@ -233,7 +234,13 @@ install(DIRECTORY include/${PROJECT_NAME}/
 #############
 ## Testing ##
 #############
+if(CATKIN_ENABLE_TESTING)
 
+    add_rostest_gtest(test_em2040_parse
+        launch/em2040_parse_test.test
+        src/test/test_kongsberg_em2040_parsing.cpp)
+    target_link_libraries(test_em2040_parse ${PROJECT_NAME})
+endif(CATKIN_ENABLE_TESTING)
 ## Add gtest based cpp test target and link libraries
 # catkin_add_gtest(${PROJECT_NAME}-test test/test_ds_kongsberg.cpp)
 # if(TARGET ${PROJECT_NAME}-test)

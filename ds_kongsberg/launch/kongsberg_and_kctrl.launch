@@ -1,0 +1,5 @@
+<launch>
+    <rosparam command="load" file="$(find ds_kongsberg)/launch/kongsberg.yaml"/>
+    <node name="kongsberg" pkg="ds_kongsberg" type="ds_kongsberg_node"/>
+    <node name="kctrl" pkg="ds_kongsberg" type="kctrl.bash"/>
+</launch>

@@ -54,6 +54,9 @@
   <build_depend>ds_multibeam_msgs</build_depend>
   <exec_depend>ds_multibeam_msgs</exec_depend>
 
+  <build_depend>ds_kongsberg_msgs</build_depend>
+  <exec_depend>ds_kongsberg_msgs</exec_depend>
+
   <build_depend>sensor_msgs</build_depend>
   <exec_depend>sensor_msgs</exec_depend>
 

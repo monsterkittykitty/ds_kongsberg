@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.8.3)
 project(ds_kongsberg_msgs)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
-# add_compile_options(-std=c++11)
+ add_compile_options(-std=c++11)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
@@ -48,6 +48,7 @@ find_package(catkin REQUIRED COMPONENTS
    DIRECTORY msg
    FILES
    KongsbergStatus.msg
+   KongsbergKSSIS.msg
  )
 
 ## Generate services in the 'srv' folder
@@ -106,7 +107,7 @@ find_package(catkin REQUIRED COMPONENTS
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES ds_kongsberg_msgs
-  CATKIN_DEPENDS message_generation std_msgs
+  CATKIN_DEPENDS message_generation std_msgs ds_core_msgs
 #  DEPENDS system_lib
 )
 

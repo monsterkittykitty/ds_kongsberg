@@ -39,6 +39,7 @@
 #include <ds_core_msgs/RawData.h>
 #include "../../src/EM_datagrams/EMdgmFormat.h"
 #include <sensor_msgs/Image.h>
+#include <sensor_msgs/PointCloud2.h>
 
 #include "ds_kongsberg_msgs/PingCmd.h"
 #include "ds_kongsberg_msgs/PowerCmd.h"
@@ -62,17 +63,20 @@ class KongsbergEM2040 : public ds_base::DsProcess {
   KongsbergEM2040(int argc, char* argv[], const std::string& name);
   ~KongsbergEM2040() override;
 
-  static bool parse_data(ds_core_msgs::RawData& raw);
-  static bool parse_message(ds_core_msgs::RawData& raw);
+  static void foo(){ROS_ERROR_STREAM("Foo!");}
 
-  static EMdgmMRZ read_mrz(uint8_t* bytes, int max_length);
+  bool parse_data(ds_core_msgs::RawData& raw);
+  bool parse_message(ds_core_msgs::RawData& raw);
+
+  static std::pair<bool, EMdgmMRZ> read_mrz(uint8_t* bytes, int max_length);
 //  static EMdgmMWC read_mwc(uint8_t* bytes);
 //
   static ds_multibeam_msgs::MultibeamRaw mrz_to_mb_raw(EMdgmMRZ* msg);
 //  static ds_multibeam_msgs::MultibeamGrid mb_raw_to_mb_grid(ds_multibeam_msgs::MultibeamRaw* msg);
 //  static ds_multibeam_msgs::MultibeamGridStats mb_raw_to_mb_grid_stats(ds_multibeam_msgs::MultibeamRaw* msg);
 //  static ds_multibeam_msgs::MultibeamFilterStats mb_raw_to_mb_filter_stats(ds_multibeam_msgs::MultibeamRaw* msg);
-//  static sensor_msgs::Image mwc_to_image(EMdgmMWC* msg);
+  static sensor_msgs::Image mwc_to_image(EMdgmMWC* msg);
+  static sensor_msgs::PointCloud2 mb_raw_to_pointcloud(ds_multibeam_msgs::MultibeamRaw* msg);
 
  protected:
   void setupServices() override;
@@ -87,6 +91,8 @@ class KongsbergEM2040 : public ds_base::DsProcess {
   bool _settings_cmd(ds_kongsberg_msgs::SettingsCmd::Request req, ds_kongsberg_msgs::SettingsCmd::Response res);
   void _on_kmall_data(ds_core_msgs::RawData raw);
   void _on_kctrl_data(ds_core_msgs::RawData raw);
+  void _send_kctrl_command(int cmd);
+  void _startup_sequence();
 
   std::unique_ptr<KongsbergEM2040Private> d_ptr_;
 };

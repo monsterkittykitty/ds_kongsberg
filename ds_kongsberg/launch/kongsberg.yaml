@@ -2,20 +2,22 @@ kongsberg:
 
   kmall_connection:
     type: "UDP"
-    udp_rx: 5003
-    udp_address: "127.0.0.1"
-    udp_tx: 15003
+    multicast: true
+    udp_rx: 6020
+    udp_address: "224.1.20.40"
+    udp_tx: 50291
   kctrl_connection:
     type: "UDP"
     udp_rx: 4002
     udp_address: "127.0.0.1"
     udp_tx: 14002
+
 ##  tcp_connection:
 #    type: "TCP"
 #    tcp_rx: 1005
 #    tcp_address: "127.0.0.1"
 #    tcp_tx: 11005
-  sounder_name: SENTRY_SOUNDER
+  sounder_name: EM2040_130
   # custom kongsberg services
   ping_service: ping_cmd
   power_service: power_cmd
@@ -23,9 +25,10 @@ kongsberg:
   values_service: values_cmd
   # custom mb msgs
   mbraw_topic: mbraw
-  mbfilter_topic: mbfilter
-  mbgrid_topic: mbgrid
-  mbgridstats_topic: mbgridstats
+  offset_topic: pu_time_offset
+#  mbfilter_topic: mbfilter
+#  mbgrid_topic: mbgrid
+#  mbgridstats_topic: mbgridstats
   # ros messages
   pointcloud_topic: pointcloud
   wc_topic: wc

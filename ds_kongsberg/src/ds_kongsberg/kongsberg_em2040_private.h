@@ -45,17 +45,27 @@ struct KongsbergEM2040Private{
 
   ros::Publisher mbraw_pub_;
   ros::Publisher mbfilter_pub_;
-  ros::Publisher mbgrid_pub_;
-  ros::Publisher mbgridstats_pub_;
-  ros::Publisher mbwc_pub_;
+//  ros::Publisher mbgrid_pub_;
+//  ros::Publisher mbgridstats_pub_;
+  ros::Publisher watercolumn_pub_;
+  ros::Publisher pointcloud_pub_;
+  ros::Publisher offset_pub_;
+
+  ros::Publisher kmstatus_pub_;
 
   // UDP connection to data stream
   boost::shared_ptr<ds_asio::DsConnection> kmall_conn_;
+
+  // UDP connection to data stream
+  boost::shared_ptr<ds_asio::DsConnection> kmall_two_;
 
   // UDP connection to kctrl for sending/receiving commands
   boost::shared_ptr<ds_asio::DsConnection> kctrl_conn_;
 
   std::string sounder_name_;
+
+  int latest_soundspeed_;
+  bool started_;
 };
 }
 #endif //SENTRY_WS_KONGSBERGEM2040_PRIVATE_H

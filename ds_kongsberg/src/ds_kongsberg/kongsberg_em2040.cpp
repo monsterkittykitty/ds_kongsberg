@@ -33,6 +33,9 @@
 
 #include "ds_kongsberg/kongsberg_em2040.h"
 #include "kongsberg_em2040_private.h"
+#include "ds_kongsberg_msgs/KongsbergKSSIS.h"
+#include "kongsberg_em2040_strings.h"
+#include "ds_core_msgs/ClockOffset.h"
 
 namespace ds_kongsberg{
 
@@ -48,17 +51,82 @@ KongsbergEM2040::KongsbergEM2040(int argc, char* argv[], const std::string& name
 {
 }
 
-KongsbergEM2040::~KongsbergEM2040() = default;
+KongsbergEM2040::~KongsbergEM2040()
+{
+  // shut down kctrl
+  _send_kctrl_command(SIS_TO_K::TERMINATE);
+}
 
 bool
 KongsbergEM2040::parse_message(ds_core_msgs::RawData& raw)
 {
+  DS_D(KongsbergEM2040);
+  ds_kongsberg_msgs::KongsbergKSSIS msg;
+  // Split on white space and pull specific indexes
+  auto str = std::string{ reinterpret_cast<const char*>(raw.data.data()), raw.data.size() };
+  auto buf = std::istringstream{ str };
+  std::vector<std::string> fields;//=
+//      std::vector<std::string>{ std::istream_iterator<std::string>(buf), std::istream_iterator<std::string>() };
+
+  while( buf.good() )
+  {
+    std::string substr;
+    getline( buf, substr, ',' );
+    fields.push_back( substr );
+  }
+
+  if (fields.size() < 3){
+    ROS_ERROR_STREAM("Msg too short : "<<str);
+    return false;
+  }
+  if (fields[0] != "$KSSIS"){
+    ROS_ERROR_STREAM("Msg doesn't contain $KSSIS : "<<fields[0]);
+    return false;
+  }
+  msg.type = std::stoi(fields[1]);
+  switch (msg.type){
+    case K_TO_SIS::KCTRL_VERSION :
+      if (fields[2] == "KCTRL_VER="){
+        break;
+      }
+    case K_TO_SIS::STATUS_IPI : {
+
+      std::stringstream ipi(fields[2]);
+      fields.pop_back();
+      while( ipi.good() )
+      {
+        std::string substr;
+        getline( ipi, substr, '~' );
+        if (substr.length()>0)
+          fields.push_back( substr );
+      }
+      if (!d->started_){
+        _startup_sequence();
+      }
+      break;
+    }
+    default :
+      if (fields[2] != d->sounder_name_){
+        ROS_ERROR_STREAM("Sounder name doesn't match : "<<fields[2]);
+        return false;
+      }
+      break;
+  }
+
+  msg.header = raw.header;
+  msg.ds_header = raw.ds_header;
+  msg.payload.resize(fields.size() - 2);
+  for (int i=0; i<msg.payload.size(); i++){
+    msg.payload[i] = fields[i+2];
+  }
+  d->kmstatus_pub_.publish(msg);
   return true;
 }
 
 bool
 KongsbergEM2040::parse_data(ds_core_msgs::RawData& raw)
 {
+  DS_D(KongsbergEM2040);
   int data_size = raw.data.size();
   int min_size = sizeof(EMdgmHeader);
   if (data_size < min_size){
@@ -69,58 +137,100 @@ KongsbergEM2040::parse_data(ds_core_msgs::RawData& raw)
   auto hdr = reinterpret_cast<EMdgmHeader*>(bytes_ptr);
   if (data_size != hdr->numBytesDgm){
     ROS_ERROR_STREAM("Raw Data size received ("<<data_size<<") != hdr->numBytes ("<<hdr->numBytesDgm<<")");
-//    return false;
+    return false;
   }
 
   std::string msg_type(hdr->dgmType, hdr->dgmType + sizeof(hdr->dgmType)/sizeof(hdr->dgmType[0]));
-  if (msg_type==EM_DGM_I_INSTALLATION_PARAM) {
-      ROS_INFO_STREAM("EM_DGM_I_INSTALLATION_PARAM");
-    }
-  else if (msg_type==EM_DGM_I_OP_RUNTIME){
-      ROS_INFO_STREAM("EM_DGM_I_OP_RUNTIME");
-    }
+  uint8_t* raw_array = reinterpret_cast<uint8_t*>(raw.data.data());
+  std::string raw_str(raw_array, raw_array + sizeof(raw_array));
+  if (msg_type==EM_DGM_I_INSTALLATION_PARAM)
+  {
+    ROS_ERROR_STREAM("EM_DGM_I_INSTALLATION_PARAM");
+    auto msg = reinterpret_cast<dgm_IIP*>(bytes_ptr);
+    return true;
+  }
+  else if (msg_type==EM_DGM_I_OP_RUNTIME)
+  {
+    ROS_ERROR_STREAM("EM_DGM_I_OP_RUNTIME");
+    auto msg = reinterpret_cast<dgm_IOP*>(bytes_ptr);
+    ROS_ERROR_STREAM("  RAW: " << raw_str);
+    return true;
+  }
   else if (msg_type==EM_DGM_S_POSITION){
-      ROS_INFO_STREAM("EM_DGM_S_POSITION");
-    }
+    ROS_ERROR_STREAM("EM_DGM_S_POSITION");
+    auto msg = reinterpret_cast<EMdgmSPO*>(bytes_ptr);
+    return true;
+  }
   else if (msg_type==EM_DGM_S_KM_BINARY){
-      ROS_INFO_STREAM("EM_DGM_S_KM_BINARY");
-    }
+    ROS_ERROR_STREAM("EM_DGM_S_KM_BINARY");
+    auto msg = reinterpret_cast<EMdgmSKM*>(bytes_ptr);
+    return true;
+  }
   else if (msg_type==EM_DGM_S_SOUND_VELOCITY_PROFILE){
-      ROS_INFO_STREAM("EM_DGM_S_SOUND_VELOCITY_PROFILE");
-    }
+    ROS_ERROR_STREAM("EM_DGM_S_SOUND_VELOCITY_PROFILE");
+    auto msg = reinterpret_cast<EMdgmSVP*>(bytes_ptr);
+    return true;
+  }
   else if (msg_type==EM_DGM_S_SOUND_VELOCITY_TRANSDUCER){
-      ROS_INFO_STREAM("EM_DGM_S_SOUND_VELOCITY_TRANSDUCER");
-    }
+    ROS_ERROR_STREAM("EM_DGM_S_SOUND_VELOCITY_TRANSDUCER");
+  }
   else if (msg_type==EM_DGM_S_CLOCK){
-      ROS_INFO_STREAM("EM_DGM_S_CLOCK");
-    }
+    ROS_ERROR_STREAM("EM_DGM_S_CLOCK");
+    auto msg = reinterpret_cast<EMdgmSCL*>(bytes_ptr);
+    ds_core_msgs::ClockOffset offset;
+    offset.header = raw.header;
+    offset.ds_header = raw.ds_header;
+    offset.device_stamp_minus_ros_stamp_sec = msg->sensData.offset_sec;
+    d->offset_pub_.publish(offset);
+    return true;
+  }
   else if (msg_type==EM_DGM_S_DEPTH){
-      ROS_INFO_STREAM("EM_DGM_S_DEPTH");
-    }
+    ROS_ERROR_STREAM("EM_DGM_S_DEPTH");
+    return false;
+  }
   else if (msg_type==EM_DGM_S_HEIGHT){
-      ROS_INFO_STREAM("EM_DGM_S_HEIGHT");
-    }
+    ROS_ERROR_STREAM("EM_DGM_S_HEIGHT");
+    return false;
+  }
   else if (msg_type==EM_DGM_M_RANGE_AND_DEPTH){
-      ROS_INFO_STREAM("EM_DGM_M_RANGE_AND_DEPTH");
-      auto mrz = read_mrz(bytes_ptr, data_size);
-      return true;
+    ROS_ERROR_STREAM("EM_DGM_M_RANGE_AND_DEPTH");
+    EMdgmMRZ mrz;
+    bool ok = false;
+    std::tie(ok, mrz) = read_mrz(bytes_ptr,data_size);
+    if (ok){
+      auto mbr = mrz_to_mb_raw(&mrz);
+      mbr.ds_header = raw.ds_header;
+      d->mbraw_pub_.publish(mbr);
+//      auto mbf = mb_raw_to_mb_filter_stats(&mbr);
+//      d->mbfilter_pub_.publish(mbf);
+//      auto mbg = mb_raw_to_mb_grid(&mbr);
+//      d->mbgrid_pub_.publish(mbg);
+//      auto mbgs = mb_raw_to_mb_grid_stats(&mbr);
+//      d->mbgridstats_pub_.publish(mbgs);
     }
+    return ok;
+  }
   else if (msg_type==EM_DGM_M_WATER_COLUMN){
-      ROS_INFO_STREAM("EM_DGM_M_WATER_COLUMN");
-    }
+    ROS_ERROR_STREAM("EM_DGM_M_WATER_COLUMN");
+    return false;
+  }
   else if (msg_type==EM_DGM_C_POSITION){
-      ROS_INFO_STREAM("EM_DGM_C_POSITION");
-    }
+    ROS_ERROR_STREAM("EM_DGM_C_POSITION");
+    auto msg = reinterpret_cast<EMdgmCPO*>(bytes_ptr);
+    return true;
+  }
   else if (msg_type==EM_DGM_C_HEAVE){
-      ROS_INFO_STREAM("EM_DGM_C_HEAVE");
-    }
+    ROS_ERROR_STREAM("EM_DGM_C_HEAVE");
+    return true;
+  }
   ROS_ERROR_STREAM("TYPE : " << msg_type << " NOT PARSED");
   return false;
 }
 
-EMdgmMRZ
+std::pair<bool, EMdgmMRZ>
 KongsbergEM2040::read_mrz(uint8_t* ptr, int max_length)
 {
+  ROS_ERROR_STREAM("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX");
   EMdgmMRZ mrz;
   int count = 0;
 
@@ -128,73 +238,137 @@ KongsbergEM2040::read_mrz(uint8_t* ptr, int max_length)
   count += sizeof(mrz.header);
   if (count>max_length){
     ROS_ERROR_STREAM("*After header* In read_mrz, count="<<count<<" exceeded max_length="<<max_length);
-    return {};
+    return {false, {}};
   }
+  ROS_ERROR_STREAM("#MRZ Header");
+  ROS_ERROR_STREAM("  echoSounderID: "<<mrz.header.echoSounderID);
+  ROS_ERROR_STREAM("  time_sec: "<<mrz.header.time_sec);
+  ROS_ERROR_STREAM("  time_sec: "<<mrz.header.time_nanosec);
   mrz.partition = *(reinterpret_cast<EMdgmMpartition*>(ptr + count));
   count += sizeof(mrz.partition);
   if (count>max_length){
     ROS_ERROR_STREAM("*After partition* In read_mrz, count="<<count<<" exceeded max_length="<<max_length);
-    return {};
+    return {false, {}};
   }
+  ROS_ERROR_STREAM("#MRZ Partition");
+  ROS_ERROR_STREAM("  numOfDgms: "<<mrz.partition.numOfDgms);
+  ROS_ERROR_STREAM("  dgmNum: "<<mrz.partition.dgmNum);
   mrz.cmnPart = *(reinterpret_cast<EMdgmMbody*>(ptr + count));
   count += mrz.cmnPart.numBytesCmnPart;
   if (count>max_length){
     ROS_ERROR_STREAM("*After Common Part* In read_mrz, count="<<count<<" exceeded max_length="<<max_length);
-    return {};
+    return {false, {}};
   }
+  ROS_ERROR_STREAM("#MRZ Body");
+  ROS_ERROR_STREAM("  numBytesCmnPart: "<<mrz.cmnPart.numBytesCmnPart);
+  ROS_ERROR_STREAM("  pingCnt: "<<mrz.cmnPart.pingCnt);
+  ROS_ERROR_STREAM("  rxFansPerPing: "<<mrz.cmnPart.rxFansPerPing);
   mrz.pingInfo = *(reinterpret_cast<EMdgmMRZ_pingInfo*>(ptr + count));
   count += mrz.pingInfo.numBytesInfoData;
   if (count>max_length){
     ROS_ERROR_STREAM("*After Ping Info* In read_mrz, count="<<count<<" exceeded max_length="<<max_length);
-    return {};
+    return {false, {}};
   }
-  for (int i=0; i<MAX_NUM_TX_PULSES; i++){
+  ROS_ERROR_STREAM("#MRZ Ping Info");
+  ROS_ERROR_STREAM("  numBytesInfoData: "<<mrz.pingInfo.numBytesInfoData);
+  ROS_ERROR_STREAM("  numTxSectors: "<<mrz.pingInfo.numTxSectors);
+  ROS_ERROR_STREAM("  numBytesPerTxSector: "<<mrz.pingInfo.numBytesPerTxSector);
+
+  ROS_ERROR_STREAM("#MRZ Tx Sectors");
+  for (int i=0; i<mrz.pingInfo.numTxSectors; i++){
     mrz.sectorInfo[i] = *(reinterpret_cast<EMdgmMRZ_txSectorInfo*>(ptr + count));
-    count += sizeof(mrz.sectorInfo[i]);
+    ROS_ERROR_STREAM("  sectorInfo["<<i<<"]tx.ArrNumber: "<< (int)(mrz.sectorInfo[i].txArrNumber));
+    count += mrz.pingInfo.numBytesPerTxSector;
     if (count>max_length){
       ROS_ERROR_STREAM("*After Sector["<<i<<"]* In read_mrz, count="<<count<<" exceeded max_length="<<max_length);
-      return {};
+      return {false, {}};
     }
   }
+  ROS_ERROR_STREAM("#MRZ Rx Info");
   mrz.rxInfo = *(reinterpret_cast<EMdgmMRZ_rxInfo*>(ptr + count));
   count += mrz.rxInfo.numBytesRxInfo;
   if (count>max_length){
     ROS_ERROR_STREAM("*After RXInfo* In read_mrz, count="<<count<<" exceeded max_length="<<max_length);
-    return {};
+    return {false, {}};
   }
-  for (int i=0; i<MAX_EXTRA_DET_CLASSES; i++){
+  ROS_ERROR_STREAM("  mrz.rxInfo.numSoundingsValidMain: "<< mrz.rxInfo.numSoundingsValidMain);
+  ROS_ERROR_STREAM("  mrz.rxInfo.numSoundingsMaxMain: "<<mrz.rxInfo.numSoundingsMaxMain);
+  ROS_ERROR_STREAM("  mrz.rxInfo.numExtraDetectionClasses: "<<mrz.rxInfo.numExtraDetectionClasses);
+  ROS_ERROR_STREAM("#MRZ Extra detections");
+  for (int i=0; i<mrz.rxInfo.numExtraDetectionClasses; i++){
     mrz.extraDetClassInfo[i] = *(reinterpret_cast<EMdgmMRZ_extraDetClassInfo*>(ptr + count));
-    count += sizeof(mrz.extraDetClassInfo[i]);
+    count += mrz.rxInfo.numBytesPerClass;
+//    ROS_ERROR_STREAM("  mrz.extraDetClassInfo["<<i<<"].numExtraDetInClass"<<mrz.extraDetClassInfo[i].numExtraDetInClass);
     if (count>max_length){
       ROS_ERROR_STREAM("*After Extra Det["<<i<<"]* In read_mrz, count="<<count<<" exceeded max_length="<<max_length);
-      return {};
+      return {false, {}};
     }
   }
-  for (int i=0; i<MAX_NUM_BEAMS+MAX_EXTRA_DET; i++){
+  ROS_ERROR_STREAM("#MRZ soundings");
+  int SIsamples = 0;
+  for (int i=0; i<mrz.rxInfo.numSoundingsMaxMain+mrz.rxInfo.numExtraDetections; i++){
     mrz.sounding[i] = *(reinterpret_cast<EMdgmMRZ_sounding*>(ptr + count));
-    count += sizeof(mrz.sounding[i]);
+    count += mrz.rxInfo.numBytesPerSounding;
+    SIsamples +=mrz.sounding[i].SInumSamples;
+//    ROS_ERROR_STREAM("  mrz.sounding["<<i<<"].SInumSamples: "<<(int)(mrz.sounding[i].SInumSamples));
+//    ROS_ERROR_STREAM("  mrz.sounding["<<i<<"].sectorNumb: "<<(int)(mrz.sounding[i].txSectorNumb));
     if (count>max_length){
       ROS_ERROR_STREAM("*After sounding["<<i<<"]* In read_mrz, count="<<count<<" exceeded max_length="<<max_length);
-      return {};
+      return {false, {}};
     }
   }
-  for (int i=0; i<MAX_SIDESCAN_SAMP; i++){
+  ROS_ERROR_STREAM("#MRZ Seafloor Image: " << SIsamples);
+  // Actual number of seabed image samples (SIsample_desidB) to be found by summing
+  // parameter SInumSamples in struct EMdgmMRZ_sounding_def for all beams.
+  for (int i=0; i<SIsamples; i++){
     mrz.SIsample_desidB[i] = *(reinterpret_cast<uint16_t*>(ptr + count));
     count += sizeof(uint16_t);
     if (count>max_length){
       ROS_ERROR_STREAM("*After SI Samp["<<i<<"]* In read_mrz, count="<<count<<" exceeded max_length="<<max_length);
-      return {};
+      return {false, {}};
     }
   }
-  ROS_INFO_STREAM("Success! MRZ read completely");
-  return mrz;
+  ROS_ERROR_STREAM("Success! MRZ read completely "<<count<<"/"<<max_length);
+  return {true, mrz};
 }
 
 ds_multibeam_msgs::MultibeamRaw
-KongsbergEM2040::mrz_to_mb_raw(EMdgmMRZ* msg)
-{
-  return {};
+KongsbergEM2040::mrz_to_mb_raw(EMdgmMRZ* msg) {
+//  return {};
 ////  struct EMdgmHeader_def 	header
+  ds_multibeam_msgs::MultibeamRaw mb{};
+  ros::Time t;
+  mb.header.stamp = t.fromSec(msg->header.time_sec + msg->header.time_nanosec / 1e9);
+
+  int num_soundings = msg->rxInfo.numSoundingsMaxMain + msg->rxInfo.numExtraDetections;
+  mb.beamflag.resize(num_soundings);
+  mb.twowayTravelTime.resize(num_soundings);
+  mb.txDelay.resize(num_soundings);
+  mb.intensity.resize(num_soundings);
+//  mb.angleAlongTrack.resize(num_soundings);
+  mb.angleAcrossTrack.resize(num_soundings);
+//  mb.beamwidthAlongTrack.resize(num_soundings);
+  mb.beamwidthAcrossTrack.resize(num_soundings);
+  for (int i = 0; i < num_soundings; i++) {
+    mb.beamflag[i] = (msg->sounding[i].detectionType == 2 ? mb.BEAM_BAD_SONAR : mb.BEAM_OK);
+    mb.twowayTravelTime[i] = msg->sounding[i].twoWayTravelTime_sec;
+    mb.txDelay[i] = msg->sounding[i].twoWayTravelTimeCorrection_sec;
+    mb.intensity[i] = msg->sounding[i].reflectivity1_dB;
+    ROS_ERROR_STREAM("Sounding num : "<<msg->sounding[i].soundingIndex);
+//    ROS_ERROR_STREAM("Sector "<<msg->sounding[i].txSectorNumb);//<<" / "<<msg->pingInfo.numTxSectors);//Tilt angle deg : "<<msg->sectorInfo[msg->sounding[i].txSectorNumb].tiltAngleReTx_deg);
+    int sector = msg->sounding[i].txSectorNumb;
+    ROS_ERROR_STREAM("Sector num : "<<sector<<"/"<<msg->pingInfo.numTxSectors);
+//    if (sector < msg->pingInfo.numTxSectors){
+      mb.angleAlongTrack[i] = 3.14159 * msg->sectorInfo[sector].tiltAngleReTx_deg/180; // use sector index to get tilt angle, then convert to rad
+//    }
+    mb.angleAcrossTrack[i] = 3.14159 * msg->sounding[i].WCNomBeamAngleAcross_deg / 180.0; // convert deg to rad
+//    mb.beamwidthAlongTrack[i] = 0;
+    mb.beamwidthAcrossTrack[i] = 3.14159 * msg->sounding[i].WCNomBeamAngleAcross_deg / 180.0;
+  }
+
+  mb.soundspeed = msg->pingInfo.soundSpeedAtTxDepth_mPerSec;
+  return mb;
+}
 ////  struct EMdgmMpartition_def 	partition
 ////  struct EMdgmMbody_def 	cmnPart
 ////  struct EMdgmMRZ_pingInfo_def 	pingInfo
@@ -359,28 +533,10 @@ KongsbergEM2040::mrz_to_mb_raw(EMdgmMRZ* msg)
 //  msg->SIsample_desidB[MAX_SIDESCAN_SAMP];
 //}
 
-//ds_multibeam_msgs::MultibeamGrid
-//KongsbergEM2040::mb_raw_to_mb_grid(ds_multibeam_msgs::MultibeamRaw* msg)
-//{
-//
-//}
-//
-//ds_multibeam_msgs::MultibeamGridStats
-//KongsbergEM2040::mb_raw_to_mb_grid_stats(ds_multibeam_msgs::MultibeamRaw* msg)
-//{
-//
-//}
-//
-//ds_multibeam_msgs::MultibeamFilterStats
-//KongsbergEM2040::mb_raw_to_mb_filter_stats(ds_multibeam_msgs::MultibeamRaw* msg)
-//{
-//
-//}
-//
-//sensor_msgs::Image
-//KongsbergEM2040::mwc_to_image(EMdgmMWC* msg)
-//{
-//
+sensor_msgs::Image
+KongsbergEM2040::mwc_to_image(EMdgmMWC* msg)
+{
+  return {};
 }
 
 void
@@ -390,6 +546,7 @@ KongsbergEM2040::setupConnections()
   DS_D(KongsbergEM2040);
   d->kmall_conn_ = addConnection("kmall_connection", boost::bind(&KongsbergEM2040::_on_kmall_data, this, _1));
   d->kctrl_conn_ = addConnection("kctrl_connection", boost::bind(&KongsbergEM2040::_on_kctrl_data, this, _1));
+//  d->kmall_two_ = addConnection("kmall_multi_two", boost::bind(&KongsbergEM2040::_on_kmall_data, this, _1));
 }
 
 void
@@ -416,7 +573,8 @@ KongsbergEM2040::setupParameters()
 {
   ds_base::DsProcess::setupParameters();
   DS_D(KongsbergEM2040);
-  d->sounder_name_ = ros::param::param<std::string>("~sounder_name", "DEFAULT_SOUNDER");
+  d->sounder_name_ = ros::param::param<std::string>("~sounder_name", "EM2040_40");
+  d->started_ = false;
 
   // systemID
   // echoSounderID
@@ -429,7 +587,25 @@ KongsbergEM2040::setupSubscriptions()
 void
 KongsbergEM2040::setupPublishers()
 {
+  DS_D(KongsbergEM2040);
+  auto nh = nodeHandle();
   ds_base::DsProcess::setupPublishers();
+  auto mbraw_topic = ros::param::param<std::string>("~mbraw_topic", "mbraw");
+  d->mbraw_pub_ = nh.advertise<ds_multibeam_msgs::MultibeamRaw>(mbraw_topic, 1000);
+//  auto mbfilter_topic = ros::param::param<std::string>("~mbfilter_topic", "mbfilter");
+//  d->mbfilter_pub_ = nh.advertise<ds_multibeam_msgs::MultibeamFilterStats>(mbfilter_topic, 1000);
+//  auto mbgrid_topic = ros::param::param<std::string>("~mbgrid_topic", "mbgrid");
+//  d->mbgrid_pub_ = nh.advertise<ds_multibeam_msgs::MultibeamGrid>(mbgrid_topic, 1000);
+//  auto mbgridstats_topic = ros::param::param<std::string>("~mbgridstats_topic", "mbgridstats");
+//  d->mbgridstats_pub_ = nh.advertise<ds_multibeam_msgs::MultibeamGridStats>(mbgridstats_topic, 1000);
+  auto watercolumn_topic = ros::param::param<std::string>("~watercolumn_topic", "watercolumn");
+  d->watercolumn_pub_ = nh.advertise<sensor_msgs::Image>(watercolumn_topic, 1000);
+  auto pointcloud_topic = ros::param::param<std::string>("~pointcloud_topic", "pointcloud");
+  d->pointcloud_pub_ = nh.advertise<sensor_msgs::PointCloud2>(pointcloud_topic, 1000);
+  auto kmstatus_topic = ros::param::param<std::string>("~kmstatus_topic", "kmstatus");
+  d->kmstatus_pub_ = nh.advertise<ds_kongsberg_msgs::KongsbergKSSIS>(kmstatus_topic, 1000);
+  auto offset_topic = ros::param::param<std::string>("~offset_topic", "pu_offset");
+  d->offset_pub_ = nh.advertise<ds_core_msgs::ClockOffset>(offset_topic, 1000);
 }
 
 bool
@@ -443,8 +619,11 @@ KongsbergEM2040::_ping_cmd(ds_kongsberg_msgs::PingCmd::Request req, ds_kongsberg
 bool
 KongsbergEM2040::_power_cmd(ds_kongsberg_msgs::PowerCmd::Request req, ds_kongsberg_msgs::PowerCmd::Response res)
 {
+//  _startup_sequence();
   DS_D(KongsbergEM2040);
-  d->kctrl_conn_->send("POWER COMMAND");
+//  d->kctrl_conn_->send("POWER COMMAND");
+  _send_kctrl_command(req.power);
+  d->kmall_conn_->send("POWER COMMAND VIA KMALL");
   return true;
 }
 
@@ -468,8 +647,28 @@ void
 KongsbergEM2040::_on_kctrl_data(ds_core_msgs::RawData raw)
 {
   parse_message(raw);
+}
+
+void
+KongsbergEM2040::_startup_sequence()
+{
+
+  _send_kctrl_command(SIS_TO_K::START);
+  _send_kctrl_command(SIS_TO_K::SET_READY);
   DS_D(KongsbergEM2040);
-  d->kctrl_conn_->send("RECEIVED KCTRL MSG");
+  ROS_INFO_STREAM("Sounder \'"<<d->sounder_name_<<"\' started and set ready!");
+  d->started_ = true;
+}
+
+void
+KongsbergEM2040::_send_kctrl_command(int cmd)
+{
+  DS_D(KongsbergEM2040);
+  std::stringstream msg;
+  msg << "$KSSIS,"
+      << cmd << ","
+      << d->sounder_name_;
+  d->kctrl_conn_->send(msg.str());
 }
 
 } //namespace
