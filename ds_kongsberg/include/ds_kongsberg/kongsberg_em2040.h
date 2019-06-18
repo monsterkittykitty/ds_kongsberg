@@ -44,6 +44,7 @@
 #include "ds_kongsberg_msgs/PingCmd.h"
 #include "ds_kongsberg_msgs/PowerCmd.h"
 #include "ds_kongsberg_msgs/SettingsCmd.h"
+#include "ds_kongsberg_msgs/BistCmd.h"
 #include "ds_kongsberg_msgs/KongsbergStatus.h"
 
 #include <ds_multibeam_msgs/MultibeamFilterStats.h>
@@ -69,6 +70,7 @@ class KongsbergEM2040 : public ds_base::DsProcess {
   bool parse_message(ds_core_msgs::RawData& raw);
 
   static std::pair<bool, EMdgmMRZ> read_mrz(uint8_t* bytes, int max_length);
+  bool read_bist_result(ds_core_msgs::RawData& raw);
 //  static EMdgmMWC read_mwc(uint8_t* bytes);
 //
   static ds_multibeam_msgs::MultibeamRaw mrz_to_mb_raw(EMdgmMRZ* msg);
@@ -86,13 +88,19 @@ class KongsbergEM2040 : public ds_base::DsProcess {
   void setupConnections() override;
 
  private:
-  bool _ping_cmd(ds_kongsberg_msgs::PingCmd::Request req, ds_kongsberg_msgs::PingCmd::Response res);
-  bool _power_cmd(ds_kongsberg_msgs::PowerCmd::Request req, ds_kongsberg_msgs::PowerCmd::Response res);
-  bool _settings_cmd(ds_kongsberg_msgs::SettingsCmd::Request req, ds_kongsberg_msgs::SettingsCmd::Response res);
+  bool _ping_cmd(ds_kongsberg_msgs::PingCmd::Request &req, ds_kongsberg_msgs::PingCmd::Response &res);
+  bool _power_cmd(ds_kongsberg_msgs::PowerCmd::Request &req, ds_kongsberg_msgs::PowerCmd::Response &res);
+  bool _settings_cmd(ds_kongsberg_msgs::SettingsCmd::Request &req, ds_kongsberg_msgs::SettingsCmd::Response &res);
+  bool _bist_cmd(ds_kongsberg_msgs::BistCmd::Request &req, ds_kongsberg_msgs::BistCmd::Response &res);
+
   void _on_kmall_data(ds_core_msgs::RawData raw);
   void _on_kctrl_data(ds_core_msgs::RawData raw);
-  void _send_kctrl_command(int cmd);
+
+  std::string _send_kctrl_command(int cmd);
+  template <class T1>
+  std::string _send_kctrl_param(std::string param_name, T1 param_value);
   void _startup_sequence();
+  void _run_next_bist();
 
   std::unique_ptr<KongsbergEM2040Private> d_ptr_;
 };

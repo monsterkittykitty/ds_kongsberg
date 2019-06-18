@@ -1,0 +1,6 @@
+uint8 BIST_ONDECK = 1
+uint8 BIST_INWATER = 2
+uint8 BIST_CANCEL = 3
+uint8 bist_command
+---
+string action

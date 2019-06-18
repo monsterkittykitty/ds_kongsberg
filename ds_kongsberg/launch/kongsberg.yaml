@@ -2,9 +2,9 @@ kongsberg:
 
   kmall_connection:
     type: "UDP"
-    multicast: true
-    udp_rx: 6020
-    udp_address: "224.1.20.40"
+#    multicast: true
+    udp_rx: 6021
+    udp_address: "192.168.100.130"
     udp_tx: 50291
   kctrl_connection:
     type: "UDP"
@@ -32,3 +32,4 @@ kongsberg:
   # ros messages
   pointcloud_topic: pointcloud
   wc_topic: wc
+  run_startup: false

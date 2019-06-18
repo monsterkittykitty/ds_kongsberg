@@ -35,6 +35,8 @@
 #define SENTRY_WS_KONGSBERGEM2040_STRINGS_H
 
 #include <string>
+#include <vector>
+#include <fstream>
 
 namespace ds_kongsberg{
 
@@ -60,7 +62,8 @@ enum K_TO_SIS{
   KCTRL_VERSION=1,
   PU_HW_SN = 812,
   STATUS_INPUTS = 813,
-  UNKNOWN_455 = 455,
+  UNKNOWN_455 = 455, // DATA STREAM PARAMS
+  BIST_RESULT = 817,
 } ;
 
 // IPI LIST
@@ -321,14 +324,14 @@ struct install_params{
   std::string POS1_Z = "INST_PARAM_PU_POS1_Z=3.000"; //float DOWNWARD
   std::string POS1_CORR = "INST_PARAM_PU_POS1_CORR=1"; //bool motion correction
   std::string POS1_DELAY = "INST_PARAM_PU_POS1_DELAY=1.000"; //float seconds
-  std::string POS1_QUAL = "INST_PARAM_PU_POS1_QAUL=On"; //enum Off On MISLABELED IN KCTL GUI
+  std::string POS1_QUAL = "INST_PARAM_PU_POS1_QAUL=On"; //enum Off On MISSPELLED
   std::string POS1_TIME = "INST_PARAM_PU_POS1_TIME=System"; // Datagram
   std::string POS1_FORMAT = "INST_PARAM_PU_POS1_FORMAT=GGK"; // GGA
   std::string POS1_INPUT = "INST_PARAM_PU_POS1_INPUT=Serial port 1"; // "No" "Net port 1"
   // POS2 "INST_PARAM_CTRL_POS2_NAME=POS_SYS_2"
   // POS3 "INST_PARAM_CTRL_POS3_NAME=blah blah"
   // ATT1
-  std::string ATT1_NAME = ;
+  std::string ATT1_NAME = "INST_PARAM_CTRL_ATT1_NAME=Attitude Name";
   std::string ATT1_X = "INST_PARAM_PU_ATT1_X=0.00"; //float meters Forward
   std::string ATT1_Y = "INST_PARAM_PU_ATT1_Y=0.00"; //float meters Starboard
   std::string ATT1_Z = "INST_PARAM_PU_ATT1_Z=0.00"; //float meters Down
@@ -395,6 +398,235 @@ struct install_params{
   std::string BIST_MULTI = "INST_PARAM_BIST_MULTI=1"; //bool
 };
 
-}
+struct bist_query_strings_def {
+  std::string CPU = "CPU test";
+  std::string TX_UNIT = "TX unit test";
+  std::string RX_CHANNELS = "RX channels";
+  std::string RX_NOISE_SPECTRUM = "RX noise spectrum";
+  std::string CBMF = "CBMF test";
+  std::string CBMF_CPU = "CBMF-CPU link";
+  std::string TX_VIA_RX = "TX channels via RX";
+  std::string SOFTWARE_VERSIONS = "Software date and versions";
+  std::string RX_UNIT = "RX unit test";
+  std::string RX_CBMF = "RX-CBMF link";
+  std::string RX_NOISE_LEVEL = "RX noise level";
+  std::string SYSTEM_INFO = "System information";
+};
+typedef struct bist_query_strings_def bist_query_strings;
+
+struct bist_lists_def{
+  bist_query_strings d;
+  std::vector<std::string> get_ondeck(){
+    return {d.CPU,
+            d.TX_UNIT,
+            d.RX_CHANNELS,
+            d.RX_NOISE_SPECTRUM,
+            d.CBMF,
+            d.CBMF_CPU,
+            d.SOFTWARE_VERSIONS,
+            d.RX_UNIT,
+            d.RX_CBMF,
+            d.RX_NOISE_LEVEL,
+            d.SYSTEM_INFO};
+  }
+
+  std::vector<std::string> get_inwater(){
+    return {d.CPU,
+            d.TX_UNIT,
+            d.RX_CHANNELS,
+            d.RX_NOISE_SPECTRUM,
+            d.CBMF,
+            d.CBMF_CPU,
+            d.TX_VIA_RX,
+            d.SOFTWARE_VERSIONS,
+            d.RX_UNIT,
+            d.RX_CBMF,
+            d.RX_NOISE_LEVEL,
+            d.SYSTEM_INFO};
+  }
+//  std::vector<std::string> ALL_STRINGS_ONDECK = {d.CPU,
+//                                                 d.TX_UNIT,
+//                                                 d.RX_CHANNELS,
+//                                                 d.RX_NOISE_SPECTRUM,
+//                                                 d.CBMF,
+//                                                 d.CBMF_CPU,
+//                                                 d.SOFTWARE_VERSIONS,
+//                                                 d.RX_UNIT,
+//                                                 d.RX_CBMF,
+//                                                 d.RX_NOISE_LEVEL,
+//                                                 d.SYSTEM_INFO};
+//  std::vector<std::string> ALL_STRINGS_INWATER= {d.CPU,
+//                                                 d.TX_UNIT,
+//                                                        bist_query_strings::RX_CHANNELS,
+//                                                        bist_query_strings::RX_NOISE_SPECTRUM,
+//                                                        bist_query_strings::CBMF,
+//                                                        bist_query_strings::CBMF_CPU,
+//                                                        bist_query_strings::TX_VIA_RX,
+//                                                        bist_query_strings::SOFTWARE_VERSIONS,
+//                                                        bist_query_strings::RX_UNIT,
+//                                                        bist_query_strings::RX_CBMF,
+//                                                        bist_query_strings::RX_NOISE_LEVEL,
+//                                                        bist_query_strings::SYSTEM_INFO};
+};
+typedef struct bist_lists_def bist_lists;
+
+
+struct bist_result_strings {
+
+  std::string CBMF_P = "$KSSIS,817,EM2040_130,p\\x02\\x00\\x00#IBR\\x00\\x82\\xf8\\x07\\xd4\\xd8\\x07]\\xf2y0\\x10W\\x02\\x00\\x00\\x02\\x00CBMF test -  EM 2040\\nNumber of CBMF boards detected: 1 (1 expected)\\n\\nCBMF status:\\n  - Board ID: 0\\n  - Parts list: EM2040_BMF 373006 FW 1.11 SW 15.01.22 \\n  - Product: CBMF 381169 B 720871 1646\\n  - Board reg. no.: 381169 B\\n  - Board serial no.: 720871\\n  - Firmware/software rev.: 1.11 15.01.22 \\n\\n  Temperature and DC power status:\\n  - FPGA die temperature [Celsius]:   56.0\\n  - FPGA voltages [Volt]: 0.99 (1.0), 1.79 (1.8), 1.00 (1.0)\\n  - External Regulated supply [";
+  std::string CBMF_F = "$KSSIS,817,EM2040_130,\\x94\\x00\\x00\\x00#IBR\\x00\\x82\\xf8\\x07;\\xd9\\x07]\\xac\\x11\\x14\\x1cx\\x00\\x00\\x00\\x02\\xffCBMF test -  EM 2040\\nNumber of CBMF boards detected: 1 (1 expected)\\n\\nCBMF status:\\n\\n  ERROR: Module not responding\\n\\x00\\x00\\x00\\x00\\x94\\x00\\x00\\x00\n";
+  unsigned char CBMF_PASS[4] = {'p', 0x02, 0x00, 0x00};
+  unsigned char CBMF_FAIL[4] = {0x94, 0x00, 0x00, 0x00};
+  std::string CPU_P = "$KSSIS,817,EM2040_130,t\\x01\\x00\\x00#IBR\\x00\\x82\\xf8\\x07\\xd6\\xe2\\x07]1\\xee$\\x11Z\\x01\\x00\\x00\\x00\\x00CPU test -  EM 2040\\nCPU: PP 833/x9x (SMP)\\nClock 14 MHz\\nDie   38 oC (peak: 41 oC @ 2019-06-17 - 17:59:23)\\nBoard 38 oC (peak: 40 oC @ 2019-06-17 - 17:59:23)\\nCore  0.80 V\\n3V3   3.04 V\\n12V   14.50 V\\n-12V  -14.50 V\\nPrimary network: 192.168.100.130:0xffffff00\\nSecondary network: 105.105.105.100:0xffff0000\\nSoftware version: 5.0.D 2019-05-21 BETA\\n\\x00\\x00t\\x01\\x00\\x00";
+  unsigned char CPU_PASS[4] = {'t', 0x01, 0x00, 0x00};
+  std::string TX_UNIT_P =  "$KSSIS,817,EM2040_130,P\\x02\\x00\\x00#IBR\\x00\\x82\\xf8\\x07F\\xe4\\x07]\\xd2\\xb6\\x8a\\x044\\x02\\x00\\x00\\x04\\x00TX unit test -  EM 2040\\nNumber of TX modules detected: 1 (1 expected)\\n\\nTX status:\\n  - Transducer serial number: 316\\n  - Board ID: 0\\n  - Parts list: EM2040_TX 337748 \\n  - Product: LPFPGA 315032 G 3818 \\n  - Board reg. no.: 337748 \\n  - Board serial no.: 759910\\n  - Firmware/software rev.: 1.07   Mar  8 2018 \\n  Temperature and DC power status:\\n  - FPGA die temperature [Celsius]:   38.3\\n  - FPGA voltages [Volt]: 0.98 (1.0), 2.49 (2.5), 3.30 (3.3)\\n  - Power supply [V\n";
+  unsigned char TX_UNIT_PASS[4] = {'P', 0x02, 0x00, 0x00};
+  std::string RX_CHANNELS_P = "$KSSIS,817,EM2040_130,\\x8cF\\x00\\x00#IBR\\x00\\x82\\xf8\\x07\\x91\\xe5\\x07]\\xb1Z\\x8f5rF\\x00\\x00\\x07\\x00RX channels -  EM 2040\\n\\nTest of RX channels.\\nSignal Amplitude in dB\\n\\n              200kHz              300kHz              380kHz\\nChannel       Low      High       Low      High       Low      High\\n  0           -3.2     -2.4       -2.1     -2.6        2.2     -0.3 \\n  1           -2.8     -2.2       -1.1     -2.1        2.7      0.1 \\n  2           -2.9     -2.3       -1.7     -2.1        2.1     -0.8 \\n  3           -2.6     -2.1       -2.0     -2.0        1.3 \n";
+  unsigned char RX_CHANNELS_PASS[4] = {0x8c, 'F', 0x00, 0x00};
+  std::string RX_NOISE_SPECTRUM_P = "$KSSIS,817,EM2040_130,\\xb0\\x07\\x00\\x00#IBR\\x00\\x82\\xf8\\x07\\xa4\\xe5\\x07]\\xe0e\\x8e\\x00\\x94\\x07\\x00\\x00\\n\\x00RX noise spectrum -  EM 2040\\nMax noise level per band:\\n   180 to 219 kHz:  52.7 dB at 186.6 kHz\\n   280 to 319 kHz:  47.2 dB at 311.6 kHz\\n   360 to 399 kHz:  46.8 dB at 382.4 kHz\\n\\nSpectral noise test:\\n\\n                       Levels in dB\\nkHz        0 to 31  32 to 63  64 to 95  96 to 127  Average\\n------------------------------------------------------------\\n   182.9 |    49.4 |    45.5 |    45.4 |    46.3 |    47.0 |\\n   188.4 |    53.5 |    45.7 |    45.8 |    47\n";
+  unsigned char RX_NOISE_SPECTRUM_PASS[4] = {0xb0, 0x07, 0x00, 0x00};
+  std::string CBMF_CPU_LINK_P = "$KSSIS,817,EM2040_130,\\xe4\\x02\\x00\\x00#IBR\\x00\\x82\\xf8\\x07\\xe4\\xe5\\x07]\\xea+\\x839\\xca\\x02\\x00\\x00\\x05\\x00CBMF-CPU link -  EM 2040\\n\\nNumber of samples requested            : 10000\\nTotal number of samples delivered      : 20000     \\n\\nWaiting for samples:\\nMaximum                                : 197    ms\\nMinimum                                : 197    ms\\nAverage last hundred                   : 197    ms\\n\\nChecking samples:\\nMaximum                                : 4      ms\\nMinimum                                : 4      ms\\nAverage last hundred                   : 4 \n";
+  unsigned char CBMF_CPU_LINK_PASS[4] = {0xe4, 0x02, 0x00, 0x00};
+  std::string TX_CHANNELS_VIA_RX_P = "$KSSIS,817,EM2040_130,\\xc0\\x01\\x00\\x00#IBR\\x00\\x82\\xf8\\x07\\x14\\xe6\\x07]\\xcb9\\xc6\\t\\xa4\\x01\\x00\\x00\\x08\\x00TX channels via RX -  EM 2040\\nTest of TX Channels (via RX):\\n\\nWARNING: \\nTX array is probably OK, but analysis of test data could not \\nbe completed due to the following cause:\\n\\n  - Return echo level too low.\\n\\nIn order to get reliable test results, the following conditions should be met:\\n- The vessel should not be moving.\\n- The seafloor should be flat and uniform.\\n- The water depth should be in the range 5 - 20 m.\\x00\\x00\\x00\\x00\\xc0\\x01\\x00\\x00\n";
+  std::string TX_CHANNELS_VIA_RX_F = "$KSSIS,817,EM2040_130,|\\x00\\x00\\x00#IBR\\x00\\x82\\xf8\\x07\\xc7\\xf7\\x07]\\xe76\\x16\\x1b`\\x00\\x00\\x00\\x08\\xffTX channels via RX -  EM 2040\\nTest of TX Channels (via RX):\\n\\nERROR: Missing data from RX1\\n\\x00\\x00\\x00\\x00|\\x00\\x00\\x00";
+  unsigned char TX_CHANNELS_VIA_RX_PASS[4] = {0xc0, 0x01, 0x00, 0x00};
+  unsigned char TX_CHANNELS_VIA_RX_FAIL[4] = {'|', 0x00, 0x00, 0x00};
+  std::string SW_VERSIONS_P = "$KSSIS,817,EM2040_130,\\x0c\\x01\\x00\\x00#IBR\\x00\\x82\\xf8\\x07g\\xe6\\x07]Eml!\\xf1\\x00\\x00\\x00\\x0f\\x00Software date and versions -  EM 2040\\nPU - serial 30018:\\n- CPU: 5.0.D 2019-05-21 BETA\\n- DCL: 1.0.0 2017-11-27\\n- VxWorks 6.9 SMP Build 1.09.01 Jun 29 2018 11:18:01\\n- CBMF: 1.11 15.01.22 \\n\\nRX: 1.02   Nov 12 2012 \\n\\nTX: 1.07   Mar  8 2018 \\x00\\x00\\x00\\x0c\\x01\\x00\\x00\n";
+  unsigned char SW_VERSIONS_PASS[4] = {0x0c, 0x01, 0x00, 0x00};
+  std::string RX_UNIT_P = "$KSSIS,817,EM2040_130,D\\x02\\x00\\x00#IBR\\x00\\x82\\xf8\\x07\\x84\\xe6\\x07]\\xa3D\\x81\\x1e(\\x02\\x00\\x00\\x03\\x00RX unit test -  EM 2040\\nNumber of RX units detected: 1 (1 expected)\\n\\nRX status:\\n  - Transducer serial number: 2017\\n  - Board ID: 0\\n  - Parts list: EM2040_RX 337744 \\n  - Product: LPFPGA 315032 G 3818 \\n  - Board reg. no.: 337744 \\n  - Board serial no.: 759866\\n  - Firmware/software rev.: 1.02   Nov 12 2012 \\n\\n  Temperature and DC power status:\\n  - FPGA die temperature [Celsius]:   45.9\\n  - FPGA voltages [Volt]: 0.97 (1.0), 2.48 (2.5), 3.30 (3.3)\\n  - Power supply [V\n";
+  unsigned char RX_UNIT_PASS[4] = {'D', 0x02, 0x00, 0x00};
+  std::string RX_CBMF_LINK_P = "$KSSIS,817,EM2040_130,\\xe4\\x02\\x00\\x00#IBR\\x00\\x82\\xf8\\x07\\x95\\xe6\\x07]\\xb5\\xf7\\xca\\x06\\xc9\\x02\\x00\\x00\\x06\\x00RX-CBMF link -  EM 2040\\n\\nNumber of samples requested            : 10000\\nTotal number of samples delivered      : 20000     \\n\\nWaiting for samples:\\nMaximum                                : 170    ms\\nMinimum                                : 170    ms\\nAverage last hundred                   : 170    ms\\n\\nChecking samples:\\nMaximum                                : 4      ms\\nMinimum                                : 4      ms\\nAverage last hundred                   : 4  \n";
+  unsigned char RX_CBMF_LINK_PASS[4] = {0xe4, 0x02, 0x00, 0x00};
+  std::string RX_NOISE_LEVEL_P = "$KSSIS,817,EM2040_130,\\xf8\\x19\\x00\\x00#IBR\\x00\\x82\\xf8\\x07\\xa3\\xe6\\x07]\\xedp\\x1b\\x1e\\xdf\\x19\\x00\\x00\\t\\x00RX noise level -  EM 2040\\n\\nNoise Test.\\nSignal Amplitude in dB\\n\\n\\nChannel          200kHz       300kHz       380kHz\\n  0              58.0         53.1         52.2 \\n  1              57.0         54.0         52.8 \\n  2              57.6         53.3         52.2 \\n  3              57.3         53.1         52.1 \\n  4              58.5         53.2         52.7 \\n  5              57.7         51.9         53.1 \\n  6              55.0         49.9         50.4 \\n  7    \n";
+  unsigned char RX_NOISE_LEVEL_PASS[4] = {0xf8, 0x19, 0x00, 0x00};
+  std::string SYSTEM_INFO_P = "$KSSIS,817,EM2040_130,T\\x08\\x00\\x00#IBR\\x00\\x82\\xf8\\x07\\xcc\\xe6\\x07]\\xa5\\xd1z\\x068\\x08\\x00\\x00\\x10\\x00System information -  EM 2040\\n<filename>PU30018_RX2017_TX316</filename>\\n\\n\\nSystem type: EM 2040 0.75x0.75\\n\\n***  PU  ***\\nPU serial: 30018\\nCPU Manufacturer: Concurrent Technologies\\nCPU BoardName: PP 833/09x\\nCPU PartNumber: 761-6037-27\\nCPU SerialNumber: M24622/061\\nClock 14 MHz\\nPrimary network: 192.168.100.130:0xffffff00\\nSecondary network: 105.105.105.100:0xffff0000\\nSoftware version: 5.0.D 2019-05-21 BETA\\nDCL version: 1.0.0 2017-11-27\\nVxWorks 6.9 SMP Build 1.09.01 ";
+  unsigned char SYSTEM_INFO_PASS[4] = {'T', 0x08, 0x00, 0x00};
+};
+
+//enum bist_result_codes{
+//  CBMF_PASS = 0x7002,
+//  CBMF_FAIL = 0x9400,
+//  CPU_PASS = 0x7401,
+//  TX_UNIT_PASS = 0x5002,
+//  TX_UNIT_FAIL = 0xb400,
+//  RX_CHANNELS_PASS = 0x8c46,
+//  RX_NOISE_SPECTRUM_PASS = 0xb007,
+//  CBMF_CPU_LINK_PASS = 0xe402,
+//  TX_CHANNELS_VIA_RX_PASS = 0xc001,
+//  TX_CHANNELS_VIA_RX_FAIL = 0x7c00,
+//  SW_VERSIONS_PASS = 0x0c01,
+//  RX_UNIT_PASS = 0x4402,
+//  RX_UNIT_FAIL = 0xb400,
+//  RX_CBMF_LINK_PASS = 0xe402,
+//  RX_NOISE_LEVEL_PASS = 0xf819,
+//  SYSTEM_INFO_PASS = 0x5408,
+//  FAIL_MASK = 0x00FF,
+//};
+
+enum bist_result_codes{
+  CBMF_PASS = 0x0270,
+  CBMF_FAIL = 0x0094,
+  CPU_PASS = 0x0174,
+  TX_UNIT_PASS = 0x0250,
+  TX_UNIT_FAIL = 0x00b4,
+  RX_CHANNELS_PASS = 0x468c,
+  RX_CHANNELS_FAIL = 0x46D8,
+  RX_NOISE_SPECTRUM_PASS = 0x07b0,
+  CBMF_CPU_LINK_PASS = 0x02e4,
+  TX_CHANNELS_VIA_RX_PASS = 0x01c0,
+  TX_CHANNELS_VIA_RX_FAIL = 0x007c,
+  SW_VERSIONS_PASS = 0x010c,
+  RX_UNIT_PASS = 0x0244,
+  RX_UNIT_FAIL = 0x00b4,
+  RX_CBMF_LINK_PASS = 0x02e4,
+  RX_NOISE_LEVEL_PASS = 0x19f8,
+  SYSTEM_INFO_PASS = 0x0854,
+  FAIL_MASK = 0xFF00,
+};
+
+struct bist_result_def
+{
+  bool pass;
+  uint16_t result_code; //t\x01
+  uint16_t zeros; // \x00\x00
+  std::string ibr; // #IBR //ALWAYS
+  uint8_t code[18]; // \x00\x82\xf8\x07 //ALWAYS // Then the rest?
+  std::string bist_type;
+  std::string sounder_type;
+  std::vector<std::string> msg_lines;
+
+  void read_result_code(){
+    bist_query_strings bs;
+    switch (result_code) {
+      case bist_result_codes::CPU_PASS :
+//        bist_type = bs.CPU;
+        pass = true;
+        break;
+      case bist_result_codes::TX_UNIT_PASS :
+//        bist_type = bs.TX_UNIT;
+        pass = true;
+        break;
+      case bist_result_codes::RX_CHANNELS_PASS :
+//        bist_type = bs.RX_CHANNELS;
+        pass = true;
+        break;
+      case bist_result_codes::RX_NOISE_SPECTRUM_PASS :
+        bist_type = bs.RX_NOISE_SPECTRUM;
+        pass = true;
+        break;
+      case bist_result_codes::CBMF_CPU_LINK_PASS :
+//        bist_type = bs.CBMF_CPU;
+        pass = true;
+        break;
+      case bist_result_codes::TX_CHANNELS_VIA_RX_PASS :
+//        bist_type = bs.TX_VIA_RX;
+        pass = true;
+        break;
+      case bist_result_codes::SW_VERSIONS_PASS :
+//        bist_type = bs.SOFTWARE_VERSIONS;
+        pass = true;
+        break;
+      case bist_result_codes::RX_UNIT_PASS :
+//        bist_type = bs.RX_UNIT;
+        pass = true;
+        break;
+//      case bist_result_codes::RX_CBMF_LINK_PASS :
+//        bist_type = bs.RX_CBMF;
+//        pass = true;
+//        break;
+      case bist_result_codes::CBMF_PASS :
+//        bist_type = bs.CBMF;
+        pass = true;
+        break;
+      case bist_result_codes::RX_NOISE_LEVEL_PASS :
+//        bist_type = bs.RX_NOISE_LEVEL;
+        pass = true;
+        break;
+      case bist_result_codes::SYSTEM_INFO_PASS :
+//        bist_type = bs.SYSTEM_INFO;
+        pass = true;
+        break;
+      default :
+        pass = false;
+    }
+  }
+
+  void print_msg(std::string fn){
+    std::ofstream myfile;
+//    out.open("myfile.txt");
+    myfile.open (fn, std::ios::app);
+    myfile << "\n";
+    myfile << "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\n";
+    myfile << bist_type << "\t" << (pass ? "PASS" : "FAIL") << "\n";
+    myfile << "--------------------------------\n";
+    for (auto line : msg_lines){
+      myfile << line << "\n";
+    }
+    myfile.close();
+  }
+};
+typedef struct bist_result_def bist_result;
+
+} //namespace
 
 #endif //SENTRY_WS_KONGSBERGEM2040_STRINGS_H

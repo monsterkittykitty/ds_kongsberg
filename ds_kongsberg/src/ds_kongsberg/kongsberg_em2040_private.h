@@ -42,6 +42,7 @@ struct KongsbergEM2040Private{
   ros::ServiceServer power_srv_;
   ros::ServiceServer settings_srv_;
   ros::ServiceServer values_srv_;
+  ros::ServiceServer bist_srv_;
 
   ros::Publisher mbraw_pub_;
   ros::Publisher mbfilter_pub_;
@@ -56,9 +57,6 @@ struct KongsbergEM2040Private{
   // UDP connection to data stream
   boost::shared_ptr<ds_asio::DsConnection> kmall_conn_;
 
-  // UDP connection to data stream
-  boost::shared_ptr<ds_asio::DsConnection> kmall_two_;
-
   // UDP connection to kctrl for sending/receiving commands
   boost::shared_ptr<ds_asio::DsConnection> kctrl_conn_;
 
@@ -66,6 +64,13 @@ struct KongsbergEM2040Private{
 
   int latest_soundspeed_;
   bool started_;
+
+  //BIST VALUES... maybe there's a better way?
+  bool bist_running = false;
+  int bist_progress = 0;
+  std::vector<std::string> bist_tests;
+  std::string bist_filename;
+  std::string bist_filename_base;
 };
 }
 #endif //SENTRY_WS_KONGSBERGEM2040_PRIVATE_H

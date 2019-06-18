@@ -14,6 +14,7 @@ find_package(catkin REQUIRED COMPONENTS
         ds_core_msgs
         ds_kongsberg_msgs
         ds_multibeam_msgs
+        ds_util
         )
 
 find_package(ClangFormat)
@@ -34,7 +35,7 @@ endif(CLANG_FORMAT_FOUND)
 catkin_package(
         INCLUDE_DIRS include
         LIBRARIES ds_kongsberg
-        CATKIN_DEPENDS ds_base ds_core_msgs ds_kongsberg_msgs ds_multibeam_msgs
+        CATKIN_DEPENDS ds_base ds_core_msgs ds_kongsberg_msgs ds_multibeam_msgs ds_util
 )
 
 ## System dependencies are found with CMake's conventions

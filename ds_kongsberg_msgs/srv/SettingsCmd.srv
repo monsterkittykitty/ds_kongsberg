@@ -1,2 +1,4 @@
-uint8 settings
+string setting_name
+string setting_value
 ---
+string command_sent

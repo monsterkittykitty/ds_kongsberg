@@ -51,6 +51,9 @@
   <build_depend>ds_base</build_depend>
   <exec_depend>ds_base</exec_depend>
 
+  <build_depend>ds_util</build_depend>
+  <exec_depend>ds_util</exec_depend>
+
   <build_depend>ds_multibeam_msgs</build_depend>
   <exec_depend>ds_multibeam_msgs</exec_depend>
 
