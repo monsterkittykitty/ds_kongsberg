@@ -34,6 +34,13 @@
 #ifndef SENTRY_WS_KONGSBERGEM2040_STRINGS_H
 #define SENTRY_WS_KONGSBERGEM2040_STRINGS_H
 
+/* Defined by J Vaccaro */
+#define EM_DGM_I_PU                        "#IPU"
+#define EM_DGM_I_PI                        "#IPI"
+#define EM_DGM_I_BIST_ERROR                "#IBE" // (BIST Error report),
+#define EM_DGM_I_BIST_REPLY                "#IBR" // (BIST reply) or
+#define EM_DGM_I_BIST_SHORT                "#IBS" // (BIST short reply).
+
 #include <string>
 #include <vector>
 #include <fstream>
