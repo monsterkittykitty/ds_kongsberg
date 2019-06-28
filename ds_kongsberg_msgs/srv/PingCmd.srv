@@ -1,2 +1,8 @@
+uint8 PING_START=1
+uint8 PING_STOP=2
+uint8 PING_NEWFILE=3
+uint8 PING_STARTUP=4
+
 uint8 ping
 ---
+string action

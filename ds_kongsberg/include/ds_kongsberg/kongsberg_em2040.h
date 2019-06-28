@@ -68,6 +68,7 @@ class KongsbergEM2040 : public ds_base::DsProcess {
 
   bool parse_data(ds_core_msgs::RawData& raw);
   bool parse_message(ds_core_msgs::RawData& raw);
+  bool read_kmall_dgm_from_kctrl(int type, ds_core_msgs::RawData& raw);
 
   static std::pair<bool, EMdgmMRZ> read_mrz(uint8_t* bytes, int max_length);
   bool read_bist_result(ds_core_msgs::RawData& raw);
@@ -100,7 +101,11 @@ class KongsbergEM2040 : public ds_base::DsProcess {
   template <class T1>
   std::string _send_kctrl_param(std::string param_name, T1 param_value);
   void _startup_sequence();
+  void _print_bist(std::string name, std::string status, std::string msg);
   void _run_next_bist();
+  void _new_kmall_file();
+  void _write_kmall_data(ds_core_msgs::RawData& raw);
+  void _write_kctrl_xml(ds_core_msgs::RawData& raw);
 
   std::unique_ptr<KongsbergEM2040Private> d_ptr_;
 };

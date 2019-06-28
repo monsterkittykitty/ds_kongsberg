@@ -45,7 +45,7 @@ struct KongsbergEM2040Private{
   ros::ServiceServer bist_srv_;
 
   ros::Publisher mbraw_pub_;
-  ros::Publisher mbfilter_pub_;
+//  ros::Publisher mbfilter_pub_;
 //  ros::Publisher mbgrid_pub_;
 //  ros::Publisher mbgridstats_pub_;
   ros::Publisher watercolumn_pub_;
@@ -53,6 +53,7 @@ struct KongsbergEM2040Private{
   ros::Publisher offset_pub_;
 
   ros::Publisher kmstatus_pub_;
+  ros::Publisher kmall_record_pub_;
 
   // UDP connection to data stream
   boost::shared_ptr<ds_asio::DsConnection> kmall_conn_;
@@ -60,17 +61,35 @@ struct KongsbergEM2040Private{
   // UDP connection to kctrl for sending/receiving commands
   boost::shared_ptr<ds_asio::DsConnection> kctrl_conn_;
 
+  // KCtrl startup info
   std::string sounder_name_;
-
-  int latest_soundspeed_;
   bool started_;
 
-  //BIST VALUES... maybe there's a better way?
+  //filename datetime facet;
+  std::string time_facet_str;
+
+  // Data logging
+  std::string shipname;
+  ros::Timer data_timer;
+  std::string kmall_filename;
+  std::string kmall_filename_base;
+  std::ofstream* kmall_stream;
+  int kmall_file_count;
+  float kmall_max_size_gb;
+  float kmall_current_size_gb;
+  // all in bytes
+  long int kmall_buffer_size, kmall_file_size, kmall_max_buffer_size, kmall_max_file_size;
+
+  //BIST
   bool bist_running = false;
   int bist_progress = 0;
   std::vector<std::string> bist_tests;
   std::string bist_filename;
   std::string bist_filename_base;
+  std::stringstream bist_summary_stream;
+
+  //XML params
+  int xml_count = 0;
 };
 }
 #endif //SENTRY_WS_KONGSBERGEM2040_PRIVATE_H

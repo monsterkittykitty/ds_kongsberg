@@ -60,8 +60,9 @@ enum K_TO_SIS{
   VALUES = 401,
   // Other, not documented so these are guesses/unknown?
   KCTRL_VERSION=1,
-  PU_HW_SN = 812,
-  STATUS_INPUTS = 813,
+  PU_HW_SN = 812, // #IPI
+  STATUS_INPUTS = 813, // # IPU
+  XML = 814,
   UNKNOWN_455 = 455, // DATA STREAM PARAMS
   BIST_RESULT = 817,
 } ;
@@ -344,6 +345,9 @@ struct install_params{
   std::string ATT1_INPUT = "INST_PARAM_PU_ATT1_INPUT=No"; // Same options as above
   // ATT2
   // SOUNDVEL
+  std::string SVP_NAME = "INST_PARAM_CTRL_SVP_NAME=Sound velocity !!!";
+  std::string SVP_INPUT = "INST_PARAM_PU_SVP_INPUT=Net port 5";
+  std::string SVP_FORMAT = "INST_PARAM_PU_SVP_FORMAT=AML SV";
   // TIME SYSTEM
   // COM1
   std::string COM1_INTERFACE = "INST_PARAM_PU_COM1_INT=RS422";
@@ -398,77 +402,80 @@ struct install_params{
   std::string BIST_MULTI = "INST_PARAM_BIST_MULTI=1"; //bool
 };
 
-struct bist_query_strings_def {
-  std::string CPU = "CPU test";
-  std::string TX_UNIT = "TX unit test";
-  std::string RX_CHANNELS = "RX channels";
-  std::string RX_NOISE_SPECTRUM = "RX noise spectrum";
-  std::string CBMF = "CBMF test";
-  std::string CBMF_CPU = "CBMF-CPU link";
-  std::string TX_VIA_RX = "TX channels via RX";
-  std::string SOFTWARE_VERSIONS = "Software date and versions";
-  std::string RX_UNIT = "RX unit test";
-  std::string RX_CBMF = "RX-CBMF link";
-  std::string RX_NOISE_LEVEL = "RX noise level";
-  std::string SYSTEM_INFO = "System information";
-};
-typedef struct bist_query_strings_def bist_query_strings;
-
-struct bist_lists_def{
-  bist_query_strings d;
+struct bist_strings_def{
+  enum {
+    BIST_CPU=0,
+    BIST_CBMF=2,
+    BIST_RX_UNIT=3,
+    BIST_TX_UNIT=4,
+    BIST_CBMF_CPU=5,
+    BIST_RX_CBMF=6,
+    BIST_RX_CHANNELS=7,
+    BIST_TX_VIA_RX=8,
+    BIST_RX_NOISE_LEVEL=9,
+    BIST_RX_NOISE_SPECTRUM=10,
+    BIST_SOFTWARE_VERSIONS=15,
+    BIST_SYSTEM_INFO=16
+  };
+  std::string CPU = "CPU test"; //0
+  std::string CBMF = "CBMF test"; //2
+  std::string RX_UNIT = "RX unit test"; //3
+  std::string TX_UNIT = "TX unit test"; //4
+  std::string CBMF_CPU = "CBMF-CPU link"; //5
+  std::string RX_CBMF = "RX-CBMF link"; //6
+  std::string RX_CHANNELS = "RX channels"; //7
+  std::string TX_VIA_RX = "TX channels via RX"; //8 DON'T RUN ON-DECK
+  std::string RX_NOISE_LEVEL = "RX noise level"; //9
+  std::string RX_NOISE_SPECTRUM = "RX noise spectrum"; //10
+  std::string SOFTWARE_VERSIONS = "Software date and versions"; //15
+  std::string SYSTEM_INFO = "System information"; //16
   std::vector<std::string> get_ondeck(){
-    return {d.CPU,
-            d.TX_UNIT,
-            d.RX_CHANNELS,
-            d.RX_NOISE_SPECTRUM,
-            d.CBMF,
-            d.CBMF_CPU,
-            d.SOFTWARE_VERSIONS,
-            d.RX_UNIT,
-            d.RX_CBMF,
-            d.RX_NOISE_LEVEL,
-            d.SYSTEM_INFO};
+    return {CPU,
+            CBMF,
+            RX_UNIT,
+            TX_UNIT,
+            CBMF_CPU,
+            RX_CBMF,
+            RX_CHANNELS,
+            RX_NOISE_LEVEL,
+            RX_NOISE_SPECTRUM,
+            SOFTWARE_VERSIONS,
+            SYSTEM_INFO};
   }
-
-  std::vector<std::string> get_inwater(){
-    return {d.CPU,
-            d.TX_UNIT,
-            d.RX_CHANNELS,
-            d.RX_NOISE_SPECTRUM,
-            d.CBMF,
-            d.CBMF_CPU,
-            d.TX_VIA_RX,
-            d.SOFTWARE_VERSIONS,
-            d.RX_UNIT,
-            d.RX_CBMF,
-            d.RX_NOISE_LEVEL,
-            d.SYSTEM_INFO};
+  std::vector<std::string> get_inwater() {
+    return {CPU,
+            CBMF,
+            RX_UNIT,
+            TX_UNIT,
+            CBMF_CPU,
+            RX_CBMF,
+            RX_CHANNELS,
+            TX_VIA_RX,
+            RX_NOISE_LEVEL,
+            RX_NOISE_SPECTRUM,
+            SOFTWARE_VERSIONS,
+            SYSTEM_INFO};
   }
-//  std::vector<std::string> ALL_STRINGS_ONDECK = {d.CPU,
-//                                                 d.TX_UNIT,
-//                                                 d.RX_CHANNELS,
-//                                                 d.RX_NOISE_SPECTRUM,
-//                                                 d.CBMF,
-//                                                 d.CBMF_CPU,
-//                                                 d.SOFTWARE_VERSIONS,
-//                                                 d.RX_UNIT,
-//                                                 d.RX_CBMF,
-//                                                 d.RX_NOISE_LEVEL,
-//                                                 d.SYSTEM_INFO};
-//  std::vector<std::string> ALL_STRINGS_INWATER= {d.CPU,
-//                                                 d.TX_UNIT,
-//                                                        bist_query_strings::RX_CHANNELS,
-//                                                        bist_query_strings::RX_NOISE_SPECTRUM,
-//                                                        bist_query_strings::CBMF,
-//                                                        bist_query_strings::CBMF_CPU,
-//                                                        bist_query_strings::TX_VIA_RX,
-//                                                        bist_query_strings::SOFTWARE_VERSIONS,
-//                                                        bist_query_strings::RX_UNIT,
-//                                                        bist_query_strings::RX_CBMF,
-//                                                        bist_query_strings::RX_NOISE_LEVEL,
-//                                                        bist_query_strings::SYSTEM_INFO};
+  std::string get_name_from_code(int code){
+    switch (code){
+      case BIST_CPU : return CPU;
+      case BIST_CBMF : return CBMF;
+      case BIST_RX_UNIT : return RX_UNIT;
+      case BIST_TX_UNIT : return TX_UNIT;
+      case BIST_CBMF_CPU : return CBMF_CPU;
+      case BIST_RX_CBMF : return RX_CBMF;
+      case BIST_RX_CHANNELS : return RX_CHANNELS;
+      case BIST_TX_VIA_RX : return TX_VIA_RX;
+      case BIST_RX_NOISE_LEVEL : return RX_NOISE_LEVEL;
+      case BIST_RX_NOISE_SPECTRUM : return RX_NOISE_SPECTRUM;
+      case BIST_SOFTWARE_VERSIONS : return SOFTWARE_VERSIONS;
+      case BIST_SYSTEM_INFO : return SYSTEM_INFO;
+      default:
+        return "Unknown";
+    }
+  }
 };
-typedef struct bist_lists_def bist_lists;
+typedef struct bist_strings_def bist_strings;
 
 
 struct bist_result_strings {
@@ -523,109 +530,130 @@ struct bist_result_strings {
 //  FAIL_MASK = 0x00FF,
 //};
 
-enum bist_result_codes{
-  CBMF_PASS = 0x0270,
-  CBMF_FAIL = 0x0094,
-  CPU_PASS = 0x0174,
-  TX_UNIT_PASS = 0x0250,
-  TX_UNIT_FAIL = 0x00b4,
-  RX_CHANNELS_PASS = 0x468c,
-  RX_CHANNELS_FAIL = 0x46D8,
-  RX_NOISE_SPECTRUM_PASS = 0x07b0,
-  CBMF_CPU_LINK_PASS = 0x02e4,
-  TX_CHANNELS_VIA_RX_PASS = 0x01c0,
-  TX_CHANNELS_VIA_RX_FAIL = 0x007c,
-  SW_VERSIONS_PASS = 0x010c,
-  RX_UNIT_PASS = 0x0244,
-  RX_UNIT_FAIL = 0x00b4,
-  RX_CBMF_LINK_PASS = 0x02e4,
-  RX_NOISE_LEVEL_PASS = 0x19f8,
-  SYSTEM_INFO_PASS = 0x0854,
-  FAIL_MASK = 0xFF00,
-};
+//std::string bist_num_to_string(int num) {
+//  std::string CPU = "CPU test";
+//  std::string TX_UNIT = "TX unit test";
+//  std::string RX_CHANNELS = "RX channels";
+//  std::string RX_NOISE_SPECTRUM = "RX noise spectrum";
+//  std::string CBMF = "CBMF test";
+//  std::string CBMF_CPU = "CBMF-CPU link";
+//  std::string TX_VIA_RX = "TX channels via RX";
+//  std::string SOFTWARE_VERSIONS = "Software date and versions";
+//  std::string RX_UNIT = "RX unit test";
+//  std::string RX_CBMF = "RX-CBMF link";
+//  std::string RX_NOISE_LEVEL = "RX noise level";
+//  std::string SYSTEM_INFO = "System information";
+////  switch (num) {
+////    case 0 :
+////      return bist_strings_def::CPU;
+////    case 2 :
+////      return bist_strings_def::CBMF;
+////    case 3:
+////      return bist_strings_def::RX_UNIT;
+////    case 4:
+////      return bist_strings_def::TX_UNIT;
+////    case 5:
+////      return bist_strings_def::CBMF_CPU;
+////    case 6:
+////      return bist_strings_def::RX_CBMF;
+////    case 11:
+////      return bist_strings_def::;
+////    case 15:
+////      return;
+////    case 16:
+////      return;
+////  }
+//}
 
-struct bist_result_def
-{
-  bool pass;
-  uint16_t result_code; //t\x01
-  uint16_t zeros; // \x00\x00
-  std::string ibr; // #IBR //ALWAYS
-  uint8_t code[18]; // \x00\x82\xf8\x07 //ALWAYS // Then the rest?
-  std::string bist_type;
-  std::string sounder_type;
-  std::vector<std::string> msg_lines;
+//enum bist_result_codes{
+//  CBMF_PASS = 0x0270,
+//  CBMF_FAIL = 0x0094,
+//  CPU_PASS = 0x0174,
+//  TX_UNIT_PASS = 0x0250,
+//  TX_UNIT_FAIL = 0x00b4,
+//  RX_CHANNELS_PASS = 0x468c,
+//  RX_CHANNELS_FAIL = 0x46D8,
+//  RX_NOISE_SPECTRUM_PASS = 0x07b0,
+//  CBMF_CPU_LINK_PASS = 0x02e4,
+//  TX_CHANNELS_VIA_RX_PASS = 0x01c0,
+//  TX_CHANNELS_VIA_RX_FAIL = 0x007c,
+//  SW_VERSIONS_PASS = 0x010c,
+//  RX_UNIT_PASS = 0x0244,
+//  RX_UNIT_FAIL = 0x00b4,
+//  RX_CBMF_LINK_PASS = 0x02e4,
+//  RX_NOISE_LEVEL_PASS = 0x19f8,
+//  SYSTEM_INFO_PASS = 0x0854,
+//  FAIL_MASK = 0xFF00,
+//};
 
-  void read_result_code(){
-    bist_query_strings bs;
-    switch (result_code) {
-      case bist_result_codes::CPU_PASS :
-//        bist_type = bs.CPU;
-        pass = true;
-        break;
-      case bist_result_codes::TX_UNIT_PASS :
-//        bist_type = bs.TX_UNIT;
-        pass = true;
-        break;
-      case bist_result_codes::RX_CHANNELS_PASS :
-//        bist_type = bs.RX_CHANNELS;
-        pass = true;
-        break;
-      case bist_result_codes::RX_NOISE_SPECTRUM_PASS :
-        bist_type = bs.RX_NOISE_SPECTRUM;
-        pass = true;
-        break;
-      case bist_result_codes::CBMF_CPU_LINK_PASS :
-//        bist_type = bs.CBMF_CPU;
-        pass = true;
-        break;
-      case bist_result_codes::TX_CHANNELS_VIA_RX_PASS :
-//        bist_type = bs.TX_VIA_RX;
-        pass = true;
-        break;
-      case bist_result_codes::SW_VERSIONS_PASS :
-//        bist_type = bs.SOFTWARE_VERSIONS;
-        pass = true;
-        break;
-      case bist_result_codes::RX_UNIT_PASS :
-//        bist_type = bs.RX_UNIT;
-        pass = true;
-        break;
-//      case bist_result_codes::RX_CBMF_LINK_PASS :
-//        bist_type = bs.RX_CBMF;
+//struct bist_result_def
+//{
+//  bool pass;
+//  uint16_t result_code; //t\x01
+//  uint16_t zeros; // \x00\x00
+//  std::string ibr; // #IBR //ALWAYS
+//  uint8_t code[18]; // \x00\x82\xf8\x07 //ALWAYS // Then the rest?
+//  std::string bist_type;
+//  std::string sounder_type;
+//  std::vector<std::string> msg_lines;
+//
+//  void read_result_code(){
+////    bist_strings bs;
+//    switch (result_code) {
+//      case bist_result_codes::CPU_PASS :
+////        bist_type = bs.CPU;
 //        pass = true;
 //        break;
-      case bist_result_codes::CBMF_PASS :
-//        bist_type = bs.CBMF;
-        pass = true;
-        break;
-      case bist_result_codes::RX_NOISE_LEVEL_PASS :
-//        bist_type = bs.RX_NOISE_LEVEL;
-        pass = true;
-        break;
-      case bist_result_codes::SYSTEM_INFO_PASS :
-//        bist_type = bs.SYSTEM_INFO;
-        pass = true;
-        break;
-      default :
-        pass = false;
-    }
-  }
-
-  void print_msg(std::string fn){
-    std::ofstream myfile;
-//    out.open("myfile.txt");
-    myfile.open (fn, std::ios::app);
-    myfile << "\n";
-    myfile << "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\n";
-    myfile << bist_type << "\t" << (pass ? "PASS" : "FAIL") << "\n";
-    myfile << "--------------------------------\n";
-    for (auto line : msg_lines){
-      myfile << line << "\n";
-    }
-    myfile.close();
-  }
-};
-typedef struct bist_result_def bist_result;
+//      case bist_result_codes::TX_UNIT_PASS :
+////        bist_type = bs.TX_UNIT;
+//        pass = true;
+//        break;
+//      case bist_result_codes::RX_CHANNELS_PASS :
+////        bist_type = bs.RX_CHANNELS;
+//        pass = true;
+//        break;
+//      case bist_result_codes::RX_NOISE_SPECTRUM_PASS :
+////        bist_type = bs.RX_NOISE_SPECTRUM;
+//        pass = true;
+//        break;
+//      case bist_result_codes::CBMF_CPU_LINK_PASS :
+////        bist_type = bs.CBMF_CPU;
+//        pass = true;
+//        break;
+//      case bist_result_codes::TX_CHANNELS_VIA_RX_PASS :
+////        bist_type = bs.TX_VIA_RX;
+//        pass = true;
+//        break;
+//      case bist_result_codes::SW_VERSIONS_PASS :
+////        bist_type = bs.SOFTWARE_VERSIONS;
+//        pass = true;
+//        break;
+//      case bist_result_codes::RX_UNIT_PASS :
+////        bist_type = bs.RX_UNIT;
+//        pass = true;
+//        break;
+////      case bist_result_codes::RX_CBMF_LINK_PASS :
+////        bist_type = bs.RX_CBMF;
+////        pass = true;
+////        break;
+//      case bist_result_codes::CBMF_PASS :
+////        bist_type = bs.CBMF;
+//        pass = true;
+//        break;
+//      case bist_result_codes::RX_NOISE_LEVEL_PASS :
+////        bist_type = bs.RX_NOISE_LEVEL;
+//        pass = true;
+//        break;
+//      case bist_result_codes::SYSTEM_INFO_PASS :
+////        bist_type = bs.SYSTEM_INFO;
+//        pass = true;
+//        break;
+//      default :
+//        pass = false;
+//    }
+//  }
+//};
+//typedef struct bist_result_def bist_result;
 
 } //namespace
 
