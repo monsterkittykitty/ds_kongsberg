@@ -47,15 +47,18 @@ KongsbergEM2040::KongsbergEM2040()
     : DsProcess()
     , d_ptr_(std::unique_ptr<KongsbergEM2040Private>(new KongsbergEM2040Private))
 {
+ROS_ERROR_STREAM("Create!");
 }
 
 KongsbergEM2040::KongsbergEM2040(int argc, char* argv[], const std::string& name)
     : DsProcess(argc, argv, name)
     , d_ptr_(std::unique_ptr<KongsbergEM2040Private>(new KongsbergEM2040Private))
 {
+ROS_ERROR_STREAM("Create!");
 }
 
 KongsbergEM2040::~KongsbergEM2040(){
+ROS_ERROR_STREAM("Destroy!");
   DS_D(KongsbergEM2040);
   if (d->kmall_stream) {
     d->kmall_stream->close();
@@ -68,6 +71,7 @@ KongsbergEM2040::~KongsbergEM2040(){
 bool
 KongsbergEM2040::parse_message(ds_core_msgs::RawData& raw)
 {
+  ROS_ERROR_STREAM("Parse message!");
   DS_D(KongsbergEM2040);
   ds_kongsberg_msgs::KongsbergKSSIS msg;
   // Split on commas and pull specific indexes
@@ -141,6 +145,7 @@ KongsbergEM2040::parse_message(ds_core_msgs::RawData& raw)
 bool
 KongsbergEM2040::read_bist_result(ds_core_msgs::RawData& raw)
 {
+  ROS_ERROR_STREAM("Read BIST!");
 //  bist_result r;
   dgm_IB r{};
   uint8_t* ptr = raw.data.data();
@@ -182,6 +187,7 @@ KongsbergEM2040::read_bist_result(ds_core_msgs::RawData& raw)
 bool
 KongsbergEM2040::read_kmall_dgm_from_kctrl(int type, ds_core_msgs::RawData& raw)
 {
+  ROS_ERROR_STREAM("Read KMALL DGM!");
   ds_core_msgs::RawData stripped_raw{};
   stripped_raw.header = raw.header;
   stripped_raw.ds_header = raw.ds_header;
@@ -210,6 +216,7 @@ KongsbergEM2040::read_kmall_dgm_from_kctrl(int type, ds_core_msgs::RawData& raw)
 bool
 KongsbergEM2040::parse_data(ds_core_msgs::RawData& raw)
 {
+  ROS_ERROR_STREAM("Parse data!");
   DS_D(KongsbergEM2040);
   auto data_size = raw.data.size();
   auto min_size = sizeof(EMdgmHeader);
@@ -433,6 +440,7 @@ KongsbergEM2040::read_mrz(uint8_t* ptr, int max_length)
 ds_multibeam_msgs::MultibeamRaw
 KongsbergEM2040::mrz_to_mb_raw(EMdgmMRZ* msg)
 {
+  ROS_ERROR_STREAM("MRZ to MBRaw");
 //  return {};
 ////  struct EMdgmHeader_def 	header
   ds_multibeam_msgs::MultibeamRaw mb{};
@@ -472,6 +480,7 @@ KongsbergEM2040::mrz_to_mb_raw(EMdgmMRZ* msg)
 sensor_msgs::Image
 KongsbergEM2040::mwc_to_image(EMdgmMWC* msg)
 {
+  ROS_ERROR_STREAM("MWC to Image!");
   return {};
 }
 
@@ -482,6 +491,7 @@ KongsbergEM2040::mwc_to_image(EMdgmMWC* msg)
 void
 KongsbergEM2040::setupConnections()
 {
+  ROS_ERROR_STREAM("Setup Connections!");
   ds_base::DsProcess::setupConnections();
   DS_D(KongsbergEM2040);
   d->kmall_conn_ = addConnection("kmall_connection", boost::bind(&KongsbergEM2040::_on_kmall_data, this, _1));
@@ -490,6 +500,7 @@ KongsbergEM2040::setupConnections()
 void
 KongsbergEM2040::setupServices()
 {
+  ROS_ERROR_STREAM("Setup Services!");
   ds_base::DsProcess::setupServices();
   DS_D(KongsbergEM2040);
   auto nh = nodeHandle();
@@ -511,6 +522,7 @@ KongsbergEM2040::setupServices()
 void
 KongsbergEM2040::setupParameters()
 {
+  ROS_ERROR_STREAM("Setup Parameters!");
   ds_base::DsProcess::setupParameters();
   DS_D(KongsbergEM2040);
   d->sounder_name_ = ros::param::param<std::string>("~sounder_name", "EM2040_40");
@@ -527,11 +539,13 @@ KongsbergEM2040::setupParameters()
 void
 KongsbergEM2040::setupSubscriptions()
 {
+  ROS_ERROR_STREAM("Setup Subs!");
   ds_base::DsProcess::setupSubscriptions();
 }
 void
 KongsbergEM2040::setupPublishers()
 {
+  ROS_ERROR_STREAM("Setup Pubs!");
   DS_D(KongsbergEM2040);
   auto nh = nodeHandle();
   ds_base::DsProcess::setupPublishers();
@@ -555,6 +569,7 @@ KongsbergEM2040::setupPublishers()
 bool
 KongsbergEM2040::_ping_cmd(ds_kongsberg_msgs::PingCmd::Request &req, ds_kongsberg_msgs::PingCmd::Response &res)
 {
+  ROS_ERROR_STREAM("Ping Cmd!");
   switch (req.ping){
     case ds_kongsberg_msgs::PingCmd::Request::PING_START :
       _new_kmall_file();
@@ -582,18 +597,21 @@ KongsbergEM2040::_ping_cmd(ds_kongsberg_msgs::PingCmd::Request &req, ds_kongsber
 bool
 KongsbergEM2040::_power_cmd(ds_kongsberg_msgs::PowerCmd::Request &req, ds_kongsberg_msgs::PowerCmd::Response &res)
 {
+  ROS_ERROR_STREAM("Power Cmd!");
   res.command_sent = _send_kctrl_command(req.power);
   return true;
 }
 bool
 KongsbergEM2040::_settings_cmd(ds_kongsberg_msgs::SettingsCmd::Request &req, ds_kongsberg_msgs::SettingsCmd::Response &res)
 {
+  ROS_ERROR_STREAM("Settings Cmd!");
   res.command_sent = _send_kctrl_param(req.setting_name, req.setting_value);
   return true;
 }
 bool
 KongsbergEM2040::_bist_cmd(ds_kongsberg_msgs::BistCmd::Request &req, ds_kongsberg_msgs::BistCmd::Response &res)
 {
+  ROS_ERROR_STREAM("BIST Cmd!");
   DS_D(KongsbergEM2040);
   bist_strings bs;
   std::stringstream filename_ss;
@@ -747,6 +765,7 @@ KongsbergEM2040::_bist_cmd(ds_kongsberg_msgs::BistCmd::Request &req, ds_kongsber
 void
 KongsbergEM2040::_on_kmall_data(ds_core_msgs::RawData raw)
 {
+  ROS_ERROR_STREAM("KMALL receive!");
   if (!parse_data(raw)){
     ROS_ERROR_STREAM("KMAll data parse failed");
   }
@@ -754,6 +773,7 @@ KongsbergEM2040::_on_kmall_data(ds_core_msgs::RawData raw)
 void
 KongsbergEM2040::_on_kctrl_data(ds_core_msgs::RawData raw)
 {
+  ROS_ERROR_STREAM("KCtrl receive!");
   if (!parse_message(raw)){
     ROS_ERROR_STREAM("KCtrl message parse failed");
   }
@@ -765,6 +785,7 @@ KongsbergEM2040::_on_kctrl_data(ds_core_msgs::RawData raw)
 void
 KongsbergEM2040::_startup_sequence()
 {
+  ROS_ERROR_STREAM("Startup sequence!");
   _send_kctrl_command(SIS_TO_K::START);
   _send_kctrl_command(SIS_TO_K::SET_READY);
   DS_D(KongsbergEM2040);
@@ -773,6 +794,7 @@ KongsbergEM2040::_startup_sequence()
 std::string
 KongsbergEM2040::_send_kctrl_command(int cmd)
 {
+  ROS_ERROR_STREAM("Send KCtrl command!");
   DS_D(KongsbergEM2040);
   std::stringstream ss;
   ss << "$KSSIS,"
@@ -786,6 +808,7 @@ template <class T1>
 std::string
 KongsbergEM2040::_send_kctrl_param(std::string param_name, T1 param_value)
 {
+  ROS_ERROR_STREAM("Send Kctrl Param");
   DS_D(KongsbergEM2040);
   std::stringstream ss;
   ss << "$KSSIS,"
@@ -801,6 +824,7 @@ KongsbergEM2040::_send_kctrl_param(std::string param_name, T1 param_value)
 void
 KongsbergEM2040::_print_bist(std::string name, std::string status, std::string msg)
 {
+  ROS_ERROR_STREAM("Print BIST!");
   DS_D(KongsbergEM2040);
   if (!d->bist_running){
     return;
@@ -819,6 +843,7 @@ KongsbergEM2040::_print_bist(std::string name, std::string status, std::string m
 void
 KongsbergEM2040::_run_next_bist()
 {
+  ROS_ERROR_STREAM("Run next BIST!");
   DS_D(KongsbergEM2040);
   if (!d->bist_running){
     return;
@@ -859,8 +884,10 @@ KongsbergEM2040::_run_next_bist()
 void
 KongsbergEM2040::_new_kmall_file()
 {
+  ROS_ERROR_STREAM("New KMALL file!");
   DS_D(KongsbergEM2040);
   d->kmall_file_count ++;
+  ROS_ERROR_STREAM("Create file name!");
   std::stringstream filename_ss;
   auto facet = new boost::posix_time::time_facet("%Y%m%d_%H%M");
   filename_ss.imbue(std::locale(filename_ss.getloc(), facet));
@@ -870,11 +897,13 @@ KongsbergEM2040::_new_kmall_file()
   filename_ss << "_" << d->shipname;
   filename_ss << ".kmall";
   d->kmall_filename = filename_ss.str();
-  if (d->kmall_stream){
+  if (d->kmall_stream != NULL){
+    ROS_ERROR_STREAM("Close old KMALL file!");
     d->kmall_stream->close();
     auto old_stream = d->kmall_stream;
     delete old_stream;
   }
+  ROS_ERROR_STREAM("Make new filestream!");
   d->kmall_stream = new std::ofstream();
   d->kmall_stream->open (d->kmall_filename, std::ios::out | std::ios::binary);
   d->kmall_buffer_size = 0;
@@ -884,6 +913,7 @@ KongsbergEM2040::_new_kmall_file()
 void
 KongsbergEM2040::_write_kmall_data(ds_core_msgs::RawData& raw)
 {
+  ROS_ERROR_STREAM("Write KMALL data!");
   DS_D(KongsbergEM2040);
   if (d->kmall_stream->is_open()){
     auto size = raw.data.size();
@@ -902,6 +932,7 @@ KongsbergEM2040::_write_kmall_data(ds_core_msgs::RawData& raw)
 void
 KongsbergEM2040::_write_kctrl_xml(ds_core_msgs::RawData& raw)
 {
+  ROS_ERROR_STREAM("Write Kctrl XML!");
   DS_D(KongsbergEM2040);
   d->xml_count++;
   std::stringstream filename_ss;

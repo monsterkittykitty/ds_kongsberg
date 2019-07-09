@@ -73,7 +73,7 @@ struct KongsbergEM2040Private{
   ros::Timer data_timer;
   std::string kmall_filename;
   std::string kmall_filename_base;
-  std::ofstream* kmall_stream;
+  std::ofstream* kmall_stream = NULL;
   int kmall_file_count;
   float kmall_max_size_gb;
   float kmall_current_size_gb;
