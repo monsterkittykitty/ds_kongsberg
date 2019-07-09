@@ -45,6 +45,7 @@
 #include "ds_kongsberg_msgs/PowerCmd.h"
 #include "ds_kongsberg_msgs/SettingsCmd.h"
 #include "ds_kongsberg_msgs/BistCmd.h"
+#include "ds_kongsberg_msgs/LoadXmlCmd.h"
 #include "ds_kongsberg_msgs/KongsbergStatus.h"
 
 #include <ds_multibeam_msgs/MultibeamFilterStats.h>
@@ -93,6 +94,7 @@ class KongsbergEM2040 : public ds_base::DsProcess {
   bool _power_cmd(ds_kongsberg_msgs::PowerCmd::Request &req, ds_kongsberg_msgs::PowerCmd::Response &res);
   bool _settings_cmd(ds_kongsberg_msgs::SettingsCmd::Request &req, ds_kongsberg_msgs::SettingsCmd::Response &res);
   bool _bist_cmd(ds_kongsberg_msgs::BistCmd::Request &req, ds_kongsberg_msgs::BistCmd::Response &res);
+  bool _load_xml_cmd(ds_kongsberg_msgs::LoadXmlCmd::Request &req, ds_kongsberg_msgs::LoadXmlCmd::Response &res);
 
   void _on_kmall_data(ds_core_msgs::RawData raw);
   void _on_kctrl_data(ds_core_msgs::RawData raw);
@@ -106,6 +108,7 @@ class KongsbergEM2040 : public ds_base::DsProcess {
   void _new_kmall_file();
   void _write_kmall_data(ds_core_msgs::RawData& raw);
   void _write_kctrl_xml(ds_core_msgs::RawData& raw);
+  void _send_xml_param(ds_core_msgs::RawData& raw);
 
   std::unique_ptr<KongsbergEM2040Private> d_ptr_;
 };

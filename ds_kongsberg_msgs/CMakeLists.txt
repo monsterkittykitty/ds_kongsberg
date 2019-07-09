@@ -61,6 +61,7 @@ find_package(catkin REQUIRED COMPONENTS
    SettingsCmd.srv
    ValuesCmd.srv
    BistCmd.srv
+   LoadXmlCmd.srv
  )
 
 ## Generate actions in the 'action' folder

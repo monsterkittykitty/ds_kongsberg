@@ -758,6 +758,11 @@ KongsbergEM2040::_bist_cmd(ds_kongsberg_msgs::BistCmd::Request &req, ds_kongsber
   _run_next_bist();
   return true;
 }
+bool
+KongsbergEM2040::_load_xml_cmd(ds_kongsberg_msgs::LoadXmlCmd::Request &req, ds_kongsberg_msgs::LoadXmlCmd::Response &res)
+{
+  return true;
+}
 
 // XXXXXXXXXXXXXXXX
 // Connection calls
