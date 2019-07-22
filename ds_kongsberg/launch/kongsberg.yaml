@@ -2,14 +2,15 @@ kongsberg:
   kmall_connection:
     type: "UDP"
     udp_address: "127.0.0.1"
-    udp_tx: 60001
-    udp_rx: 60000
-    buffer_size: 35000
+    udp_tx: 6021
+    udp_rx: 6020
+    buffer_size: 65000
   kctrl_connection:
     type: "UDP"
     udp_rx: 4002
     udp_address: "127.0.0.1"
     udp_tx: 14002
+    buffer_size: 20000
   sounder_name: EM2040_130
   # custom kongsberg services
   ping_service: ping_cmd

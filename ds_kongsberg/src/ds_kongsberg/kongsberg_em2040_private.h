@@ -48,10 +48,11 @@ struct KongsbergEM2040Private{
 //  ros::Publisher mbfilter_pub_;
 //  ros::Publisher mbgrid_pub_;
 //  ros::Publisher mbgridstats_pub_;
-  ros::Publisher watercolumn_pub_;
+//  ros::Publisher watercolumn_pub_;
   ros::Publisher pointcloud_pub_;
   ros::Publisher offset_pub_;
 
+  ros::Publisher kssis_pub_;
   ros::Publisher kmstatus_pub_;
   ros::Publisher kmall_record_pub_;
 
@@ -62,34 +63,39 @@ struct KongsbergEM2040Private{
   boost::shared_ptr<ds_asio::DsConnection> kctrl_conn_;
 
   // KCtrl startup info
-  std::string sounder_name_;
-  bool started_;
+//  std::string sounder_name_;
+//  bool started_;
+  ds_kongsberg_msgs::KongsbergStatus m_status;
 
-  //filename datetime facet;
-  std::string time_facet_str;
+//  filename datetime facet;
+//  std::string time_facet_str;
 
   // Data logging
-  std::string shipname;
-  ros::Timer data_timer;
-  std::string kmall_filename;
-  std::string kmall_filename_base;
+//  std::string shipname;
+  ros::Timer kctrl_timer;
+  ros::Timer kmall_timer;
+  ros::Timer pu_powered_timer;
+  ros::Timer pu_connected_timer;
+//  std::string kmall_filename;
+//  std::string kmall_filename_base;
   std::ofstream* kmall_stream = NULL;
-  int kmall_file_count = 0;
-  float kmall_max_size_gb;
-  float kmall_current_size_gb;
+//  int kmall_file_count = 0;
+//  float kmall_max_size_gb;
+//  float kmall_current_size_gb;
   // all in bytes
-  long int kmall_buffer_size, kmall_file_size, kmall_max_buffer_size, kmall_max_file_size;
+//  long int  kmall_file_size;
+  long int kmall_buffer_size, kmall_max_buffer_size, kmall_max_file_size;
 
   //BIST
-  bool bist_running = false;
-  int bist_progress = 0;
+//  bool bist_running = false;
+//  int bist_progress = 0;
   std::vector<std::string> bist_tests;
-  std::string bist_filename;
-  std::string bist_filename_base;
+//  std::string bist_filename;
+//  std::string bist_filename_base;
   std::stringstream bist_summary_stream;
 
-  //XML params
-  int xml_count = 0;
+//  XML params
+//  int xml_count = 0;
 };
 }
 #endif //SENTRY_WS_KONGSBERGEM2040_PRIVATE_H
