@@ -1,0 +1,6 @@
+<launch>
+    <rosparam command="load" file="$(find ds_kongsberg)/launch/dummy_sensors.yaml"/>
+    <node name="gga_gen" pkg="ds_navstate_to_gga" type="ds_navstate_to_gga_node"/>
+    <node name="zda_gen" pkg="ds_timegen" type="ds_timegen"/>
+    <node name="aml_sv_gen" pkg="ds_util_nodes" type="spitter_node"/>
+</launch>

@@ -1,0 +1,46 @@
+gga_gen:
+  navstate_topic: navstate
+  spitter: true
+  gga:
+    type: "UDP"
+    udp_rx: 11001
+    udp_address: "192.168.100.130"
+    udp_tx: 11000
+
+aml_sv_gen:
+  message: " 1468.0 "
+  interval_msec: 100
+  newline: true
+  connection:
+#    type: "SERIAL"
+#    port: /dev/ttyUSB0
+#    baud: 9600
+#    data_bits: 8
+    type: "UDP"
+    udp_rx: 12001
+    udp_address: "192.168.100.130"
+    udp_tx: 12000
+
+zda_gen:
+  edgetech:
+    type: "UDP"
+#    udp_rx: 6020
+#    udp_address: "234.1.1.2"
+#    udp_tx: 6021
+    udp_rx: 19001
+    udp_address: "127.0.0.1"
+    udp_tx: 19002
+  reson:
+#    type: "SERIAL"
+#    port: /dev/ttyUSB0
+#    baud: 19200
+#    data_bits: 8
+    type: "UDP"
+    udp_rx: 13001
+    udp_address: "192.168.100.130"
+    udp_tx: 13000
+  phins:
+    type: "UDP"
+    udp_rx: 19003
+    udp_address: "127.0.0.1"
+    udp_tx: 19004
