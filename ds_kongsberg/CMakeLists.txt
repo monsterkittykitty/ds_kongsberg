@@ -140,6 +140,7 @@ add_library(${PROJECT_NAME}
         src/${PROJECT_NAME}/kongsberg_em2040_private.cpp
         src/${PROJECT_NAME}/kongsberg_em2040_strings.h
         src/${PROJECT_NAME}/kongsberg_em2040_strings.cpp
+        src/${PROJECT_NAME}/kongsberg_em2040_util.h
         src/EM_datagrams/EMdgmFormat.h
         )
 
