@@ -89,6 +89,7 @@ class KongsbergEM2040 : public ds_base::DsProcess {
   void setupPublishers() override;
   void setupParameters() override;
   void setupConnections() override;
+  void setupTimers() override;
 
  private:
   bool _ping_cmd(ds_kongsberg_msgs::PingCmd::Request &req, ds_kongsberg_msgs::PingCmd::Response &res);
@@ -109,11 +110,13 @@ class KongsbergEM2040 : public ds_base::DsProcess {
   void _new_kmall_file();
   void _write_kmall_data(ds_core_msgs::RawData& raw);
   void _write_kctrl_xml(ds_core_msgs::RawData& raw);
+  void _read_kctrl_xml(std::string filename);
   void _send_xml_param(ds_core_msgs::RawData& raw);
   void _on_kctrl_timeout(const ros::TimerEvent&);
   void _on_kmall_timeout(const ros::TimerEvent&);
   void _on_pu_powered_timeout(const ros::TimerEvent&);
   void _on_pu_connected_timeout(const ros::TimerEvent&);
+  void _on_pinging_timeout(const ros::TimerEvent&);
 
   std::unique_ptr<KongsbergEM2040Private> d_ptr_;
 };

@@ -242,6 +242,8 @@ if(CATKIN_ENABLE_TESTING)
         launch/em2040_parse_test.test
         src/test/test_kongsberg_em2040_parsing.cpp)
     target_link_libraries(test_em2040_parse ${PROJECT_NAME})
+    catkin_add_gtest(test_em2040_utils src/test/test_kongsberg_em2040_util.cpp)
+    target_link_libraries(test_em2040_utils ${PROJECT_NAME})
 endif(CATKIN_ENABLE_TESTING)
 ## Add gtest based cpp test target and link libraries
 # catkin_add_gtest(${PROJECT_NAME}-test test/test_ds_kongsberg.cpp)

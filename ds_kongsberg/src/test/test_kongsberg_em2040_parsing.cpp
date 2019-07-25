@@ -58,7 +58,6 @@ TEST_F(Em2040Test, parsePass)
 {
 //  auto node = new ds_kongsberg::KongsbergEM2040();
   ds_kongsberg::KongsbergEM2040 nh;
-  nh.foo();
   long long int index = 0;
   const auto test_ls = std::list<std::pair<bool, int>>{
     {true, 1104}, // #IIP

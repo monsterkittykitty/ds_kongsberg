@@ -43,6 +43,7 @@ struct KongsbergEM2040Private{
   ros::ServiceServer settings_srv_;
   ros::ServiceServer values_srv_;
   ros::ServiceServer bist_srv_;
+  ros::ServiceServer xml_srv_;
 
   ros::Publisher mbraw_pub_;
 //  ros::Publisher mbfilter_pub_;
@@ -76,6 +77,7 @@ struct KongsbergEM2040Private{
   ros::Timer kmall_timer;
   ros::Timer pu_powered_timer;
   ros::Timer pu_connected_timer;
+  ros::Timer pinging_timer;
 //  std::string kmall_filename;
 //  std::string kmall_filename_base;
   std::ofstream* kmall_stream = NULL;

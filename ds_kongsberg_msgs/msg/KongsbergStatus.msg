@@ -47,9 +47,30 @@ uint8 depth
 uint8 svp
 uint8 time_sync
 uint8 pps
-bool all_good
-bool any_missing
-bool any_bad
+bool sensors_all_good
+bool sensors_any_missing
+bool sensors_any_bad
+
+# Runtime params
+# depth settings
+float32 rt_force_depth
+uint8 rt_min_depth
+uint8 rt_max_depth
+uint16 rt_ping_freq
+string rt_depth_mode
+string rt_detector_mode
+bool rt_fm_disable
+bool rt_log_watercol
+bool rt_extra_detect
+
+# txmit params
+bool rt_pitch_stab
+float32 rt_tx_angle_along
+string rt_yaw_stab
+string rt_heading_filter
+float32 rt_max_ping_rate
+uint16 rt_min_swath_distance
+bool rt_trigger
 
 # Latest ping
 uint16 ping_num
