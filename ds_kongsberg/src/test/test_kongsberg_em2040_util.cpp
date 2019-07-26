@@ -2,24 +2,53 @@
 // Created by jvaccaro on 7/25/19.
 //
 
-#include "ds_kongsberg/kongsberg_em2040_util.h"
+#include "../ds_kongsberg/kongsberg_em2040_util.h"
 
-#include <list>
+#include <vector>
 #include <gtest/gtest.h>
 #include <ros/param.h>
 
-TEST_F(Em2040Util, test_split_out_params_pass){
-  std::string xml = "<TOKEN>\n<ID>ABC</ID>\n<VALUE>DEF</VALUE>\n</TOKEN>";
-  auto res = ds_kongsberg::split_out_params(xml);
-  ASSERT_STREQ(res.first[0], "ABC");
-  ASSERT_STREQ(res.second[0], "DEF");
+class Em2040Util : public::testing::Test
+{
+ public:
+  std::string xml_filename = "/home/jvaccaro/code/sentry_ws/src/ds_kongsberg/ds_kongsberg/src/test/test_xml_load.xml";
+  static void SetUpTestCase()
+  {
+  }
+};
+
+TEST_F(Em2040Util, test_string_split_out_xml_params_pass){
+  std::string xml = "<TOKEN>\n<ID>par1</ID>\n<VALUE>val1</VALUE>\n</TOKEN>\n<TOKEN>\n<ID>par2</ID>\n<VALUE>val2</VALUE>\n</TOKEN>\n<TOKEN>\n<ID>par3</ID>\n<VALUE>val3</VALUE>\n</TOKEN>\n<TOKEN>\n<ID>par4</ID>\n<XXVALUE>val4</XXVALUE>\n</TOKEN>\n<TOKEN>\n<ID>par5</ID>\n<VALUE>val5</VALUE>\n</TOKEN>";
+  std::vector<std::string> expected_params = {"par1", "par2", "par3", "par5"};
+  std::vector<std::string> expected_vals = {"val1", "val2", "val3", "val5"};
+  std::vector<std::string> params, vals;
+  std::tie(params, vals) = ds_kongsberg::string_split_out_xml_params(xml);
+  ASSERT_EQ(params.size(), vals.size());
+  ASSERT_EQ(params.size(), expected_params.size());
+  for (int i=0; i<params.size(); i++){
+    ASSERT_STREQ(params[i].data(), expected_params[i].data());
+    ASSERT_STREQ(vals[i].data(), expected_vals[i].data());
+  }
+}
+
+TEST_F(Em2040Util, test_file_split_out_xml_params_pass){
+  std::vector<std::string> expected_params = {"p1", "p2", "p3", "p5"};
+  std::vector<std::string> expected_vals = {"v1", "v2", "v3", "v5"};
+  std::vector<std::string> params, vals;
+  std::tie(params, vals) = ds_kongsberg::file_split_out_xml_params(xml_filename);
+  ASSERT_EQ(params.size(), vals.size());
+  ASSERT_EQ(params.size(), expected_params.size());
+  for (int i=0; i<params.size(); i++){
+    ASSERT_STREQ(params[i].data(), expected_params[i].data());
+    ASSERT_STREQ(vals[i].data(), expected_vals[i].data());
+  }
 }
 
 int main(int argc, char** argv)
 {
   testing::InitGoogleTest(&argc, argv);
-  ros::init(argc, argv, "test_em2040_utils");
+//  ros::init(argc, argv, "test_em2040_utils");
   auto ret = RUN_ALL_TESTS();
-  ros::shutdown();
+//  ros::shutdown();
   return ret;
 }

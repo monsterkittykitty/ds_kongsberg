@@ -38,7 +38,6 @@
 #include "kongsberg_em2040_strings.h"
 #include "ds_core_msgs/ClockOffset.h"
 #include <regex>
-#include "boost/date_time/posix_time/posix_time_types.hpp"
 #include "ds_util/int_to_hex.h"
 #include "ds_kongsberg_msgs/KongsbergKMAllRecord.h"
 
@@ -841,7 +840,7 @@ KongsbergEM2040::_bist_cmd(ds_kongsberg_msgs::BistCmd::Request &req, ds_kongsber
 bool
 KongsbergEM2040::_load_xml_cmd(ds_kongsberg_msgs::LoadXmlCmd::Request &req, ds_kongsberg_msgs::LoadXmlCmd::Response &res)
 {
-  _read_kctrl_xml(req.xml_filename);
+  res.command = _read_kctrl_xml(req.xml_filename);
   return true;
 }
 
@@ -893,17 +892,28 @@ KongsbergEM2040::_send_kctrl_command(int cmd)
   d->kctrl_conn_->send(msg);
   return msg;
 }
+
 template <class T1>
 std::string
-KongsbergEM2040::_send_kctrl_param(std::string param_name, T1 param_value)
+KongsbergEM2040::_send_kctrl_param(std::string param, T1 val)
+{
+  return _send_kctrl_param(std::vector<std::string>{param}, std::vector<std::string>{val});
+}
+
+template <class T1>
+std::string
+KongsbergEM2040::_send_kctrl_param(std::vector<std::string> params, std::vector<T1> vals)
 {
   DS_D(KongsbergEM2040);
   std::stringstream ss;
   ss << "$KSSIS,"
      << SIS_TO_K::SETVALUES << ","
-     << d->m_status.sounder_name << ","
-     << param_name << "="
-     << param_value;
+     << d->m_status.sounder_name;
+  for (int i=0; i<params.size(); i++){
+    ss << ","
+       << params[i] << "="
+       << vals[i];
+  }
   auto msg = ss.str();
   d->kctrl_conn_->send(msg);
   return msg;
@@ -1022,22 +1032,17 @@ KongsbergEM2040::_write_kctrl_xml(ds_core_msgs::RawData& raw)
   ROS_ERROR_STREAM("Logged XML in "<<d->m_status.xml_filename);
 }
 
-void
+std::string
 KongsbergEM2040::_read_kctrl_xml(std::string filename)
 {
   DS_D(KongsbergEM2040);
-  ROS_ERROR_STREAM("Attempting to read kctrl xml");
-  std::ifstream in(filename, std::ios::in | std::ios::binary);
-  if (in)
-  {
-    std::ostringstream contents;
-    contents << "$KSSIS," << SIS_TO_K::READPARAMS << "," << d->m_status.sounder_name << ",";
-    contents << in.rdbuf();
-    in.close();
-    ROS_ERROR_STREAM("XML Length: "<<contents.str().length());
-    d->kctrl_conn_->send(contents.str());
+  std::vector<std::string> params, vals;
+  std::tie(params, vals) = file_split_out_xml_params(filename);
+  ROS_ERROR_STREAM(params.size() << " params found, " << vals.size() << " vals found");
+  if (params.size() != vals.size()){
+    return "No command sent, params and vals don't match";
   }
-//  ROS_ERROR_STREAM("Successfully read kctrl xml");
+  return _send_kctrl_param(params, vals);
 }
 
 // XXXXXXXXXXXXXXX

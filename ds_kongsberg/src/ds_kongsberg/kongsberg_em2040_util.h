@@ -8,8 +8,13 @@
 #define M_PI_RAD 3.14159
 #define M_PI_DEG 180.0
 
+#include "boost/date_time/posix_time/posix_time_io.hpp"
+#include "boost/date_time/posix_time/posix_time_types.hpp"
+#include <sstream>
+#include <fstream>
+#include <iostream>
 #include <string>
-#include <list>
+#include <vector>
 
 namespace ds_kongsberg {
 
@@ -34,10 +39,10 @@ double rad_to_deg(double rad){
   return rad*M_PI_DEG/M_PI_RAD;
 }
 
-std::pair<std::list<std::string>, std::list<std::string>>
-split_out_params(std::string data, std::string token_param="ID", std::string token_value="VALUE", std::string token_delim="TOKEN")
+std::pair<std::vector<std::string>, std::vector<std::string>>
+string_split_out_xml_params(std::string data, std::string token_param="ID", std::string token_value="VALUE", std::string token_delim="TOKEN")
 {
-  std::list<std::string> params, values;
+  std::vector<std::string> params, values;
   std::stringstream ss(data);
   std::string l;
   std::string param_start = "<" + token_param + ">";
@@ -49,20 +54,55 @@ split_out_params(std::string data, std::string token_param="ID", std::string tok
   std::string param{};
   std::string value{};
   while(std::getline(ss,l,'\n')){
-    if (l.find(param_start)){
+    if (!l.find(param_start)){
       param = l.substr(param_start.length(), l.length() - param_start.size() - param_end.length());
-    } else if (l.find(value_start)) {
+    } else if (!l.find(value_start)) {
       value = l.substr(value_start.length(), l.length() - value_start.size() - value_end.length());
-      params.push_back(param);
-      values.push_back(value);
-    } else if (l.find(delim_start)){
+    } else if (!l.find(delim_start)){
       param = "";
       value = "";
+    } else if (!l.find(delim_end)){
+      if (!param.empty() && !value.empty()){
+        params.push_back(param);
+        values.push_back(value);
+      }
     }
   }
-  return std::tie(params, values);
+  return {params, values};
 }
 
+std::pair<std::vector<std::string>, std::vector<std::string>>
+file_split_out_xml_params(std::string filename, std::string token_param="ID", std::string token_value="VALUE", std::string token_delim="TOKEN")
+{
+  std::vector<std::string> params, values;
+  std::string param_start = "<" + token_param + ">";
+  std::string param_end = "</" + token_param + ">";
+  std::string value_start = "<" + token_value + ">";
+  std::string value_end = "</" + token_value + ">";
+  std::string delim_start = "<" + token_delim + ">";
+  std::string delim_end = "</" + token_delim + ">";
+  std::string param{};
+  std::string value{};
+  std::string l;
+  std::ifstream in(filename, std::ios::in | std::ios::binary);
+  while(in >> l){
+    if (!l.find(param_start)){
+      param = l.substr(param_start.length(), l.length() - param_start.size() - param_end.length());
+    } else if (!l.find(value_start)) {
+      value = l.substr(value_start.length(), l.length() - value_start.size() - value_end.length());
+    } else if (!l.find(delim_start)){
+      param = "";
+      value = "";
+    } else if (!l.find(delim_end)){
+      if (!param.empty() && !value.empty()){
+        params.push_back(param);
+        values.push_back(value);
+      }
+    }
+  }
+  return {params, values};
 }
+
+} //namespace
 
 #endif //PROJECT_KONGSBERG_EM2040_UTIL_H

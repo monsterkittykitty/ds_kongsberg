@@ -103,14 +103,16 @@ class KongsbergEM2040 : public ds_base::DsProcess {
 
   std::string _send_kctrl_command(int cmd);
   template <class T1>
-  std::string _send_kctrl_param(std::string param_name, T1 param_value);
+  std::string _send_kctrl_param(std::string param, T1 param_val);
+  template <class T1>
+  std::string _send_kctrl_param(std::vector<std::string> params, std::vector<T1> vals);
   void _startup_sequence();
   void _print_bist(std::string name, std::string status, std::string msg);
   void _run_next_bist();
   void _new_kmall_file();
   void _write_kmall_data(ds_core_msgs::RawData& raw);
   void _write_kctrl_xml(ds_core_msgs::RawData& raw);
-  void _read_kctrl_xml(std::string filename);
+  std::string _read_kctrl_xml(std::string filename);
   void _send_xml_param(ds_core_msgs::RawData& raw);
   void _on_kctrl_timeout(const ros::TimerEvent&);
   void _on_kmall_timeout(const ros::TimerEvent&);
