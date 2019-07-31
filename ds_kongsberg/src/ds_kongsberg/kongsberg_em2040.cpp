@@ -385,6 +385,7 @@ KongsbergEM2040::read_mrz(uint8_t* ptr, int max_length)
 {
 //  ROS_ERROR_STREAM("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX");
   EMdgmMRZ mrz;
+  memset(&mrz, 0, sizeof(mrz));
   int count = 0;
 
   mrz.header = *(reinterpret_cast<EMdgmHeader*>(ptr + count));
@@ -585,23 +586,24 @@ KongsbergEM2040::setupServices()
   ds_base::DsProcess::setupServices();
   DS_D(KongsbergEM2040);
   auto nh = nodeHandle();
+  const auto name = ros::this_node::getName();
 
   std::string ping_srv = ros::param::param<std::string>("~ping_service", "ping_cmd");
   d->ping_srv_ = nh.advertiseService<ds_kongsberg_msgs::PingCmd::Request, ds_kongsberg_msgs::PingCmd::Response>
-      (ping_srv, boost::bind(&KongsbergEM2040::_ping_cmd, this, _1, _2));
+      (name + "/" + ping_srv, boost::bind(&KongsbergEM2040::_ping_cmd, this, _1, _2));
   std::string power_srv = ros::param::param<std::string>("~power_service", "power_cmd");
   d->power_srv_ = nh.advertiseService<ds_kongsberg_msgs::PowerCmd::Request, ds_kongsberg_msgs::PowerCmd::Response>
-      (power_srv, boost::bind(&KongsbergEM2040::_power_cmd, this, _1, _2));
+      (name + "/" + power_srv, boost::bind(&KongsbergEM2040::_power_cmd, this, _1, _2));
   std::string settings_srv = ros::param::param<std::string>("~settings_service", "settings_cmd");
   d->settings_srv_ = nh.advertiseService<ds_kongsberg_msgs::SettingsCmd::Request,
                                          ds_kongsberg_msgs::SettingsCmd::Response>
-      (settings_srv, boost::bind(&KongsbergEM2040::_settings_cmd, this, _1, _2));
+      (name + "/" + settings_srv, boost::bind(&KongsbergEM2040::_settings_cmd, this, _1, _2));
   std::string bist_srv = ros::param::param<std::string>("~bist_service", "bist_cmd");
   d->bist_srv_ = nh.advertiseService<ds_kongsberg_msgs::BistCmd::Request, ds_kongsberg_msgs::BistCmd::Response>
-      (bist_srv, boost::bind(&KongsbergEM2040::_bist_cmd, this, _1, _2));
-  std::string xml_srv = ros::param::param<std::string>("~xml_service", "xml_cmd");
+      (name + "/" + bist_srv, boost::bind(&KongsbergEM2040::_bist_cmd, this, _1, _2));
+  std::string xml_srv = ros::param::param<std::string>("~xml_service", "load_xml_cmd");
   d->xml_srv_ = nh.advertiseService<ds_kongsberg_msgs::LoadXmlCmd::Request, ds_kongsberg_msgs::LoadXmlCmd::Response>
-      (xml_srv, boost::bind(&KongsbergEM2040::_load_xml_cmd, this, _1, _2));
+      (name + "/" + xml_srv, boost::bind(&KongsbergEM2040::_load_xml_cmd, this, _1, _2));
 }
 void
 KongsbergEM2040::setupParameters()
@@ -642,20 +644,25 @@ KongsbergEM2040::setupPublishers()
   ds_base::DsProcess::setupPublishers();
   DS_D(KongsbergEM2040);
   auto nh = nodeHandle();
+  const auto name = ros::this_node::getName();
+
   auto mbraw_topic = ros::param::param<std::string>("~mbraw_topic", "mbraw");
-  d->mbraw_pub_ = nh.advertise<ds_multibeam_msgs::MultibeamRaw>(nh.getNamespace() + mbraw_topic, 1000);
-//  auto watercolumn_topic = ros::param::param<std::string>("~watercolumn_topic", "watercolumn");
-//  d->watercolumn_pub_ = nh.advertise<sensor_msgs::Image>(nh.getNamespace() + watercolumn_topic, 1000);
+  d->mbraw_pub_ = nh.advertise<ds_multibeam_msgs::MultibeamRaw>(name + "/" + mbraw_topic, 1000);
+
   auto pointcloud_topic = ros::param::param<std::string>("~pointcloud_topic", "pointcloud");
-  d->pointcloud_pub_ = nh.advertise<sensor_msgs::PointCloud2>(nh.getNamespace() + pointcloud_topic, 1000);
+  d->pointcloud_pub_ = nh.advertise<sensor_msgs::PointCloud2>(name + "/" + pointcloud_topic, 1000);
+
   auto kssis_topic = ros::param::param<std::string>("~kssis_topic", "kssis");
-  d->kssis_pub_ = nh.advertise<ds_kongsberg_msgs::KongsbergKSSIS>(nh.getNamespace() + kssis_topic, 1000);
+  d->kssis_pub_ = nh.advertise<ds_kongsberg_msgs::KongsbergKSSIS>(name + "/" + kssis_topic, 1000);
+
   auto offset_topic = ros::param::param<std::string>("~offset_topic", "pu_offset");
-  d->offset_pub_ = nh.advertise<ds_core_msgs::ClockOffset>(nh.getNamespace() + offset_topic, 1000);
+  d->offset_pub_ = nh.advertise<ds_core_msgs::ClockOffset>(name + "/" + offset_topic, 1000);
+
   auto kmall_record_topic = ros::param::param<std::string>("~kmall_records_topic", "kmall_records");
-  d->kmall_record_pub_ = nh.advertise<ds_kongsberg_msgs::KongsbergKMAllRecord>(nh.getNamespace() + kmall_record_topic, 1000);
+  d->kmall_record_pub_ = nh.advertise<ds_kongsberg_msgs::KongsbergKMAllRecord>(name + "/" + kmall_record_topic, 1000);
+
   auto kmstatus_topic = ros::param::param<std::string>("~kmstatus_topic", "kmstatus");
-  d->kmstatus_pub_ = nh.advertise<ds_kongsberg_msgs::KongsbergStatus>(nh.getNamespace() + kmstatus_topic, 1000);
+  d->kmstatus_pub_ = nh.advertise<ds_kongsberg_msgs::KongsbergStatus>(name + "/" + kmstatus_topic, 1000);
 }
 
 void
@@ -664,16 +671,26 @@ KongsbergEM2040::setupTimers()
   ds_base::DsProcess::setupTimers();
   DS_D(KongsbergEM2040);
   auto nh = nodeHandle();
-  d->kmall_timer = nh.createTimer(ros::Duration(3),
+  auto kmall_to = ros::param::param<double>("~kmall_timeout", 3.0);
+  d->kmall_timer = nh.createTimer(ros::Duration(kmall_to),
                                   &KongsbergEM2040::_on_kmall_timeout, this);
+
+  auto kctrl_to = ros::param::param<double>("~kctrl_timeout", 3.0);
   d->kctrl_timer = nh.createTimer(ros::Duration(3),
                                   &KongsbergEM2040::_on_kctrl_timeout, this);
-  d->pu_powered_timer = nh.createTimer(ros::Duration(10),
+
+  auto pu_powered_to = ros::param::param<double>("~pu_powered_timeout", 10.0);
+  d->pu_powered_timer = nh.createTimer(ros::Duration(pu_powered_to),
                                        &KongsbergEM2040::_on_pu_powered_timeout, this);
-  d->pu_connected_timer = nh.createTimer(ros::Duration(10),
+
+  auto pu_connected_to = ros::param::param<double>("~pu_connected_timeout", 10.0);
+  d->pu_connected_timer = nh.createTimer(ros::Duration(pu_connected_to),
                                          &KongsbergEM2040::_on_pu_connected_timeout, this);
-  d->pinging_timer = nh.createTimer(ros::Duration(3),
+
+  auto pinging_to = ros::param::param<double>("~pinging_timeout", 3.0);
+  d->pinging_timer = nh.createTimer(ros::Duration(pinging_to),
                                     &KongsbergEM2040::_on_pinging_timeout, this);
+
   d->kmall_timer.start();
   d->kctrl_timer.start();
   d->pu_powered_timer.start();
@@ -799,7 +816,7 @@ KongsbergEM2040::_bist_cmd(ds_kongsberg_msgs::BistCmd::Request &req, ds_kongsber
       bist_name = "bist_cbmf_cpu";
       break;
     case ds_kongsberg_msgs::BistCmd::Request::BIST_TX_VIA_RX :
-      d->bist_tests = std::vector<std::string>({bs.CBMF_CPU});
+      d->bist_tests = std::vector<std::string>({bs.TX_VIA_RX});
       bist_name = "bist_tx_via_rx";
       break;
     case ds_kongsberg_msgs::BistCmd::Request::BIST_SOFTWARE_VERSIONS :
@@ -958,7 +975,7 @@ KongsbergEM2040::_run_next_bist()
     fs.close();
   }
   if (d->m_status.bist_progress < d->bist_tests.size() ){
-    ROS_ERROR_STREAM("Running BIST ... "<< d->bist_tests[d->m_status.bist_progress]);
+    ROS_INFO_STREAM("Running BIST ... "<< d->bist_tests[d->m_status.bist_progress]);
     // Send the next command
     _send_kctrl_param("INST_PARAM_BIST_DO", d->bist_tests[d->m_status.bist_progress]);
   } else if (d->m_status.bist_progress == d->bist_tests.size()){
@@ -969,7 +986,7 @@ KongsbergEM2040::_run_next_bist()
     fs << "Ran tests...\n";
     fs << d->bist_summary_stream.str();
     fs.close();
-    ROS_ERROR_STREAM("BIST done! \n"<<d->bist_summary_stream.str()<<"Full results in "<<d->m_status.bist_filename);
+    ROS_INFO_STREAM("BIST done! \n"<<d->bist_summary_stream.str()<<"Full results in "<<d->m_status.bist_filename);
     d->bist_tests.resize(0);
     d->m_status.bist_running = false;
   } else {
