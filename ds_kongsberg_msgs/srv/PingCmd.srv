@@ -3,6 +3,7 @@ uint8 PING_STOP=2
 uint8 PING_NEWFILE=3
 uint8 PING_STARTUP=4
 uint8 PING_WRITESETTINGS=5
+
 uint8 ping
 ---
 string action
