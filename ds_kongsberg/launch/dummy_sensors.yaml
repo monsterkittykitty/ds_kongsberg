@@ -6,7 +6,14 @@ gga_gen:
     udp_rx: 11001
     udp_address: "192.168.100.130"
     udp_tx: 11000
-
+gga_passthru:
+  navstate_topic: /sentry/nav/agg/state
+  spitter: true
+  gga:
+    type: "UDP"
+    udp_rx: 11001
+    udp_address: "192.168.100.130"
+    udp_tx: 11000
 aml_sv_gen:
   message: " 1468.0 "
   interval_msec: 100
