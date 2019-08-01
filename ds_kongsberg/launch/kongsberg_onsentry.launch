@@ -1,0 +1,8 @@
+<launch>
+    <group ns="sonars">
+        <group ns="kongsberg">
+            <rosparam command="load" file="$(find ds_kongsberg)/launch/kongsberg_onsentry.yaml"/>
+            <node name="kongsberg" pkg="ds_kongsberg" type="ds_kongsberg_node"/>
+        </group>
+    </group>
+</launch>
