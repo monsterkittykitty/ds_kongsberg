@@ -1,14 +1,14 @@
 gga_gen:
   navstate_topic: navstate
-  spitter: true
+  spitter: false
   gga:
     type: "UDP"
     udp_rx: 11001
     udp_address: "192.168.100.130"
     udp_tx: 11000
 gga_passthru:
-  navstate_topic: /sentry/nav/agg/state
-  spitter: true
+  navstate_topic: /sentry/nav/deadreck/state
+  spitter: false
   gga:
     type: "UDP"
     udp_rx: 11001
@@ -38,14 +38,14 @@ zda_gen:
     udp_address: "127.0.0.1"
     udp_tx: 19002
   reson:
-#    type: "SERIAL"
-#    port: /dev/ttyUSB0
-#    baud: 19200
-#    data_bits: 8
-    type: "UDP"
-    udp_rx: 13001
-    udp_address: "192.168.100.130"
-    udp_tx: 13000
+    type: "SERIAL"
+    port: /dev/ttyS44
+    baud: 19200
+    data_bits: 8
+#    type: "UDP"
+#    udp_rx: 13001
+#    udp_address: "192.168.100.130"
+#    udp_tx: 13000
   phins:
     type: "UDP"
     udp_rx: 19003
