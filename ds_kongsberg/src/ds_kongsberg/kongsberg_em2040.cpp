@@ -56,7 +56,6 @@ KongsbergEM2040::KongsbergEM2040(int argc, char* argv[], const std::string& name
 }
 
 KongsbergEM2040::~KongsbergEM2040(){
-//ROS_ERROR_STREAM("Destroy!");
   DS_D(KongsbergEM2040);
   if (d->kmall_stream) {
     d->kmall_stream->close();
@@ -717,11 +716,8 @@ KongsbergEM2040::_ping_cmd(ds_kongsberg_msgs::PingCmd::Request &req, ds_kongsber
   switch (req.ping){
     case ds_kongsberg_msgs::PingCmd::Request::PING_START :
       _new_kmall_file();
-      _send_kctrl_command(SIS_TO_K::LOG_IOP_SVP);
       _send_kctrl_command(SIS_TO_K::START_PING);
       d->m_status.pinging = true;
-      d->kctrl_timer.stop();
-      d->kctrl_timer.start();
       res.action = "Commanded ping start, created new kmall file, logged IOP and SVP information";
       break;
     case ds_kongsberg_msgs::PingCmd::Request::PING_STOP :
