@@ -290,6 +290,8 @@ KongsbergEM2040::parse_data(ds_core_msgs::RawData& raw)
   if (msg_type==EM_DGM_I_INSTALLATION_PARAM)
   {
     record.record_name = "EM_DGM_I_INSTALLATION_PARAM";
+    _new_kmall_file();
+    _write_kmall_data(raw);
 //    auto msg = reinterpret_cast<dgm_IIP*>(bytes_ptr);
   }
   else if (msg_type==EM_DGM_I_OP_RUNTIME)
@@ -715,7 +717,8 @@ KongsbergEM2040::_ping_cmd(ds_kongsberg_msgs::PingCmd::Request &req, ds_kongsber
   }
   switch (req.ping){
     case ds_kongsberg_msgs::PingCmd::Request::PING_START :
-      _new_kmall_file();
+//      _new_kmall_file();
+      _send_kctrl_command(SIS_TO_K::LOG_IOP_SVP);
       _send_kctrl_command(SIS_TO_K::START_PING);
       d->m_status.pinging = true;
       res.action = "Commanded ping start, created new kmall file, logged IOP and SVP information";
@@ -726,13 +729,18 @@ KongsbergEM2040::_ping_cmd(ds_kongsberg_msgs::PingCmd::Request &req, ds_kongsber
       res.action = "Commanded ping stop";
       break;
     case ds_kongsberg_msgs::PingCmd::Request::PING_NEWFILE :
-      _new_kmall_file();
-      res.action = "Created new kmall file";
+//      _send_kctrl_command(SIS_TO_K::STOP_PING);
+//      _new_kmall_file();
+      _send_kctrl_command(SIS_TO_K::LOG_IOP_SVP);
+//      _send_kctrl_command(SIS_TO_K::START_PING);
+      res.action = "Requested IOP SVP Header";
       break;
     case ds_kongsberg_msgs::PingCmd::Request::PING_STARTUP :
       _startup_sequence();
       res.action = "Commanded startup sequence";
       break;
+    case ds_kongsberg_msgs::PingCmd::Request::PING_NEWFILE_FORCE :
+      _new_kmall_file();
     default:
       res.action = "Ping command not recognized";
   }
@@ -1017,11 +1025,11 @@ KongsbergEM2040::_write_kmall_data(ds_core_msgs::RawData& raw)
     auto size = raw.data.size();
     auto data = reinterpret_cast<const char*>(raw.data.data());
     d->kmall_stream->write(data, size);
-    // TODO: ensure correct units on filesize
     d->kmall_buffer_size += size;
     d->m_status.kmall_filesize_kB += size;
     if (d->m_status.kmall_filesize_kB > d->kmall_max_file_size){
-      _new_kmall_file();
+//      _new_kmall_file();
+      _send_kctrl_command(SIS_TO_K::LOG_IOP_SVP);
     } else if (d->kmall_buffer_size > d->kmall_max_buffer_size){
       d->kmall_stream->flush();
       d->kmall_buffer_size = 0;
