@@ -51,3 +51,31 @@ zda_gen:
     udp_rx: 19003
     udp_address: "127.0.0.1"
     udp_tx: 19004
+nmea_to_simrad:
+  is_spitter: true
+  ignore_status: true
+  nmea:
+# OCTANS
+    type: "SERIAL"
+    port: "/dev/ttyUSB0"
+    baud: 38400
+    parity: "odd"
+    stop_bits: 2
+    data_bits: 8
+##    matcher: "match_char"
+##    delimiter: "0A"
+## UDP
+#    type: "UDP"
+#    udp_rx: 10000
+#    udp_address: "127.0.0.1"
+#    udp_tx: 10001
+  em2040:
+# EM2040 Port 3
+    type: "SERIAL"
+    port: "/dev/ttyUSB1"
+    baud: 38400
+# UDP
+#    type: "UDP"
+#    udp_rx: 10002
+#    udp_address: "127.0.0.1"
+#    udp_tx: 10003

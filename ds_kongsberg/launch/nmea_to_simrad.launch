@@ -1,0 +1,4 @@
+<launch>
+    <rosparam command="load" file="$(find ds_kongsberg)/launch/nmea_to_simrad.yaml"/>
+    <node name="nmea_to_simrad" pkg="ds_nmea_to_simrad_em" type="ds_nmea_to_simrad_em_node"/>
+</launch>
