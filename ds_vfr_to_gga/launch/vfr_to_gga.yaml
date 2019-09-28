@@ -1,0 +1,11 @@
+vfr_to_gga:
+  gga:
+    type: "UDP"
+    udp_rx: 15001
+    udp_address: "192.168.100.130"
+    udp_tx: 15000
+  vfr:
+    type: "UDP"
+    udp_rx: 50001
+    udp_address: "127.0.0.1"
+    udp_tx: 50000
