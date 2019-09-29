@@ -69,6 +69,7 @@ bool
 KongsbergEM2040::parse_message(ds_core_msgs::RawData& raw)
 {
   DS_D(KongsbergEM2040);
+  std::unique_lock<std::mutex> lck(d->m_status_mutex);
   ds_kongsberg_msgs::KongsbergKSSIS msg;
   // Split on commas and pull specific indexes
   auto str = std::string{ reinterpret_cast<const char*>(raw.data.data()), raw.data.size() };
@@ -99,9 +100,6 @@ KongsbergEM2040::parse_message(ds_core_msgs::RawData& raw)
         break;
       }
     case K_TO_SIS::STATUS_IPI : {
-      d->pu_powered_timer.stop();
-      d->pu_powered_timer.start();
-      d->m_status.pu_powered = true;
       std::stringstream ipi(fields[2]);
       fields.pop_back();
       while( ipi.good() )
@@ -117,9 +115,6 @@ KongsbergEM2040::parse_message(ds_core_msgs::RawData& raw)
       break;
     }
     case K_TO_SIS::STATUS_IPU : {
-      d->pu_connected_timer.stop();
-      d->pu_connected_timer.start();
-      d->m_status.pu_connected = true;
       parse_ipu(fields);
     }
     default :
@@ -127,7 +122,7 @@ KongsbergEM2040::parse_message(ds_core_msgs::RawData& raw)
         read_kmall_dgm_from_kctrl(msg.type, raw);
         break;
       }
-      if (fields[2] != d->m_status.sounder_name){
+      if (fields[2] != d->m_sounder_name){
         ROS_ERROR_STREAM("Sounder name doesn't match : "<<fields[2]);
         return false;
       }
@@ -151,7 +146,8 @@ KongsbergEM2040::parse_ipu(std::vector<std::string> fields)
     return false;
   }
   DS_D(KongsbergEM2040);
-  if (fields[2] != d->m_status.sounder_name){
+  std::unique_lock<std::mutex> lck(d->m_status_mutex);
+  if (fields[2] != d->m_sounder_name){
     ROS_ERROR_STREAM("IPU sounder name doesn't match");
     return false;
   }
@@ -166,6 +162,9 @@ KongsbergEM2040::parse_ipu(std::vector<std::string> fields)
   d->m_status.time_sync = read_good_bad_missing(fields[12]);
   d->m_status.pps = read_good_bad_missing(fields[13]);
 
+  d->pu_connected_timer.stop();
+  d->pu_connected_timer.start();
+  d->m_status.pu_connected = true;
   d->kmstatus_pub_.publish(d->m_status);
   return true;
 }
@@ -206,6 +205,7 @@ KongsbergEM2040::read_bist_result(ds_core_msgs::RawData& raw)
   auto max_index = raw.data.size();
 
   DS_D(KongsbergEM2040);
+  std::unique_lock<std::mutex> lck(d->m_status_mutex);
   auto message = std::string{ reinterpret_cast<const char*>(ptr + index), max_index - index };
   std::string name;
   bist_strings b;
@@ -231,7 +231,8 @@ KongsbergEM2040::read_kmall_dgm_from_kctrl(int type, ds_core_msgs::RawData& raw)
   stripped_raw.ds_header = raw.ds_header;
 
   DS_D(KongsbergEM2040);
-  std::string front = "$KSSIS," + std::to_string(type) + "," + d->m_status.sounder_name + ",";
+  std::unique_lock<std::mutex> lck(d->m_status_mutex);
+  std::string front = "$KSSIS," + std::to_string(type) + "," + d->m_sounder_name + ",";
   auto index = front.length();
   auto max_index = raw.data.size();
   stripped_raw.data.resize(max_index-index);
@@ -266,12 +267,10 @@ KongsbergEM2040::parse_data(ds_core_msgs::RawData& raw)
     return false;
   }
 
-  // Get the data header
   uint8_t* bytes_ptr = raw.data.data();
   auto hdr = reinterpret_cast<EMdgmHeader*>(bytes_ptr);
   std::string msg_type(hdr->dgmType, hdr->dgmType + sizeof(hdr->dgmType)/sizeof(hdr->dgmType[0]));
 
-  // Mark down descriptive details about the record
   ds_kongsberg_msgs::KongsbergKMAllRecord record;
   record.ds_header = raw.ds_header;
   record.header.stamp = ros::Time(hdr->time_sec, hdr->time_nanosec);
@@ -284,41 +283,30 @@ KongsbergEM2040::parse_data(ds_core_msgs::RawData& raw)
     return false;
   }
 
-  // Parse the rest of the message based on its type
-//  uint8_t* raw_array = reinterpret_cast<uint8_t*>(raw.data.data());
-//  std::string raw_str(bytes_ptr, bytes_ptr + sizeof(bytes_ptr));
   if (msg_type==EM_DGM_I_INSTALLATION_PARAM)
   {
     record.record_name = "EM_DGM_I_INSTALLATION_PARAM";
     _new_kmall_file();
     _write_kmall_data(raw);
-//    auto msg = reinterpret_cast<dgm_IIP*>(bytes_ptr);
   }
   else if (msg_type==EM_DGM_I_OP_RUNTIME)
   {
     record.record_name = "EM_DGM_I_OP_RUNTIME";
-//    auto msg = reinterpret_cast<dgm_IOP*>(bytes_ptr);
-
   }
   else if (msg_type==EM_DGM_S_POSITION){
     record.record_name = "EM_DGM_S_POSITION";
-//    auto msg = reinterpret_cast<EMdgmSPO*>(bytes_ptr);
   }
   else if (msg_type==EM_DGM_S_KM_BINARY){
     record.record_name = "EM_DGM_S_KM_BINARY";
-//    auto msg = reinterpret_cast<EMdgmSKM*>(bytes_ptr);
   }
   else if (msg_type==EM_DGM_S_SOUND_VELOCITY_PROFILE){
     record.record_name = "EM_DGM_S_SOUND_VELOCITY_PROFILE";
-//    auto msg = reinterpret_cast<EMdgmSVP*>(bytes_ptr);
   }
   else if (msg_type==EM_DGM_S_SOUND_VELOCITY_TRANSDUCER){
     record.record_name = "EM_DGM_S_SOUND_VELOCITY_TRANSDUCER";
-//    auto msg = reinterpret_cast<EMdgmSVT*>(bytes_ptr);
   }
   else if (msg_type==EM_DGM_S_CLOCK){
     record.record_name = "EM_DGM_S_CLOCK";
-//    auto msg = reinterpret_cast<EMdgmSCL*>(bytes_ptr);
     ds_core_msgs::ClockOffset offset;
     offset.header = record.header;
     offset.ds_header = record.ds_header;
@@ -327,16 +315,14 @@ KongsbergEM2040::parse_data(ds_core_msgs::RawData& raw)
   }
   else if (msg_type==EM_DGM_S_DEPTH){
     record.record_name = "EM_DGM_S_DEPTH";
-//    auto msg = reinterpret_cast<EMdgmSDE*>(bytes_ptr);
   }
   else if (msg_type==EM_DGM_S_HEIGHT){
     record.record_name = "EM_DGM_S_HEIGHT";
-//    auto msg = reinterpret_cast<EMdgmSHI*>(bytes_ptr);
   }
   else if (msg_type==EM_DGM_M_RANGE_AND_DEPTH){
     d->pinging_timer.stop();
-    d->m_status.pinging = true;
     d->pinging_timer.start();
+    d->m_status.pinging = true;
     record.record_name = "EM_DGM_M_RANGE_AND_DEPTH";
     EMdgmMRZ mrz;
     bool ok = false;
@@ -357,22 +343,11 @@ KongsbergEM2040::parse_data(ds_core_msgs::RawData& raw)
   }
   else if (msg_type==EM_DGM_C_POSITION){
     record.record_name = "EM_DGM_C_POSITION";
-//    auto msg = reinterpret_cast<EMdgmCPO*>(bytes_ptr);
   }
   else if (msg_type==EM_DGM_C_HEAVE){
     record.record_name = "EM_DGM_C_HEAVE";
-//    auto msg = reinterpret_cast<EMdgmCHE*>(bytes_ptr);
   }
-//  else if (msg_type==EM_DGM_I_BIST_ERROR
-//      || msg_type==EM_DGM_I_BIST_REPLY
-//      || msg_type==EM_DGM_I_BIST_SHORT){
-//    record.record_name = "EM_DGM_I_BIST";
-//    read_bist_result(raw);
-//  } else if (msg_type==EM_DGM_I_PU){
-//    record.record_name = "EM_DGM_I_PU";
-//  } else if (msg_type==EM_DGM_I_PI){
-//    record.record_name = "EM_DGM_I_PI";
-//  }
+
   if (record.record_name.empty()){
     ROS_ERROR_STREAM("TYPE : " << msg_type << " not parsed, but recorded anyways");
     record.record_name = "Unknown";
@@ -384,7 +359,7 @@ KongsbergEM2040::parse_data(ds_core_msgs::RawData& raw)
 std::pair<bool, EMdgmMRZ>
 KongsbergEM2040::read_mrz(uint8_t* ptr, int max_length)
 {
-//  ROS_ERROR_STREAM("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX");
+
   EMdgmMRZ mrz;
   memset(&mrz, 0, sizeof(mrz));
   int count = 0;
@@ -395,65 +370,48 @@ KongsbergEM2040::read_mrz(uint8_t* ptr, int max_length)
     ROS_ERROR_STREAM("*After header* In read_mrz, count="<<count<<" exceeded max_length="<<max_length);
     return {false, {}};
   }
-//  ROS_ERROR_STREAM("#MRZ Header");
-//  ROS_ERROR_STREAM("  echoSounderID: "<<mrz.header.echoSounderID);
-//  ROS_ERROR_STREAM("  time_sec: "<<mrz.header.time_sec);
-//  ROS_ERROR_STREAM("  time_sec: "<<mrz.header.time_nanosec);
+
   mrz.partition = *(reinterpret_cast<EMdgmMpartition*>(ptr + count));
   count += sizeof(mrz.partition);
   if (count>max_length){
     ROS_ERROR_STREAM("*After partition* In read_mrz, count="<<count<<" exceeded max_length="<<max_length);
     return {false, {}};
   }
-//  ROS_ERROR_STREAM("#MRZ Partition");
-//  ROS_ERROR_STREAM("  numOfDgms: "<<mrz.partition.numOfDgms);
-//  ROS_ERROR_STREAM("  dgmNum: "<<mrz.partition.dgmNum);
+
   mrz.cmnPart = *(reinterpret_cast<EMdgmMbody*>(ptr + count));
   count += mrz.cmnPart.numBytesCmnPart;
   if (count>max_length){
     ROS_ERROR_STREAM("*After Common Part* In read_mrz, count="<<count<<" exceeded max_length="<<max_length);
     return {false, {}};
   }
-//  ROS_ERROR_STREAM("#MRZ Body");
-//  ROS_ERROR_STREAM("  numBytesCmnPart: "<<mrz.cmnPart.numBytesCmnPart);
-//  ROS_ERROR_STREAM("  pingCnt: "<<mrz.cmnPart.pingCnt);
-//  ROS_ERROR_STREAM("  rxFansPerPing: "<<mrz.cmnPart.rxFansPerPing);
+
   mrz.pingInfo = *(reinterpret_cast<EMdgmMRZ_pingInfo*>(ptr + count));
   count += mrz.pingInfo.numBytesInfoData;
   if (count>max_length){
     ROS_ERROR_STREAM("*After Ping Info* In read_mrz, count="<<count<<" exceeded max_length="<<max_length);
     return {false, {}};
   }
-//  ROS_ERROR_STREAM("#MRZ Ping Info");
-//  ROS_ERROR_STREAM("  numBytesInfoData: "<<mrz.pingInfo.numBytesInfoData);
-//  ROS_ERROR_STREAM("  numTxSectors: "<<mrz.pingInfo.numTxSectors);
-//  ROS_ERROR_STREAM("  numBytesPerTxSector: "<<mrz.pingInfo.numBytesPerTxSector);
 
-//  ROS_ERROR_STREAM("#MRZ Tx Sectors");
   for (int i=0; i<mrz.pingInfo.numTxSectors; i++){
     mrz.sectorInfo[i] = *(reinterpret_cast<EMdgmMRZ_txSectorInfo*>(ptr + count));
-//    ROS_ERROR_STREAM("  sectorInfo["<<i<<"]tx.ArrNumber: "<< (int)(mrz.sectorInfo[i].txArrNumber));
     count += mrz.pingInfo.numBytesPerTxSector;
     if (count>max_length){
       ROS_ERROR_STREAM("*After Sector["<<i<<"]* In read_mrz, count="<<count<<" exceeded max_length="<<max_length);
       return {false, {}};
     }
   }
-//  ROS_ERROR_STREAM("#MRZ Rx Info");
+
   mrz.rxInfo = *(reinterpret_cast<EMdgmMRZ_rxInfo*>(ptr + count));
   count += mrz.rxInfo.numBytesRxInfo;
   if (count>max_length){
     ROS_ERROR_STREAM("*After RXInfo* In read_mrz, count="<<count<<" exceeded max_length="<<max_length);
     return {false, {}};
   }
-//  ROS_ERROR_STREAM("  mrz.rxInfo.numSoundingsValidMain: "<< mrz.rxInfo.numSoundingsValidMain);
-//  ROS_ERROR_STREAM("  mrz.rxInfo.numSoundingsMaxMain: "<<mrz.rxInfo.numSoundingsMaxMain);
-//  ROS_ERROR_STREAM("  mrz.rxInfo.numExtraDetectionClasses: "<<mrz.rxInfo.numExtraDetectionClasses);
-//  ROS_ERROR_STREAM("#MRZ Extra detections");
+
   for (int i=0; i<mrz.rxInfo.numExtraDetectionClasses; i++){
     mrz.extraDetClassInfo[i] = *(reinterpret_cast<EMdgmMRZ_extraDetClassInfo*>(ptr + count));
     count += mrz.rxInfo.numBytesPerClass;
-//    ROS_ERROR_STREAM("  mrz.extraDetClassInfo["<<i<<"].numExtraDetInClass"<<mrz.extraDetClassInfo[i].numExtraDetInClass);
+
     if (count>max_length){
       ROS_ERROR_STREAM("*After Extra Det["<<i<<"]* In read_mrz, count="<<count<<" exceeded max_length="<<max_length);
       return {false, {}};
@@ -490,9 +448,6 @@ KongsbergEM2040::read_mrz(uint8_t* ptr, int max_length)
 ds_multibeam_msgs::MultibeamRaw
 KongsbergEM2040::mrz_to_mb_raw(EMdgmMRZ* msg)
 {
-//  ROS_ERROR_STREAM("MRZ to MBRaw");
-//  return {};
-////  struct EMdgmHeader_def 	header
   ds_multibeam_msgs::MultibeamRaw mb{};
   ros::Time t;
   mb.header.stamp = t.fromSec(msg->header.time_sec + msg->header.time_nanosec / 1.0e9);
@@ -511,10 +466,7 @@ KongsbergEM2040::mrz_to_mb_raw(EMdgmMRZ* msg)
     mb.twowayTravelTime[i] = msg->sounding[i].twoWayTravelTime_sec;
     mb.txDelay[i] = msg->sounding[i].twoWayTravelTimeCorrection_sec;
     mb.intensity[i] = msg->sounding[i].reflectivity1_dB;
-//    ROS_ERROR_STREAM("Sounding num : "<<msg->sounding[i].soundingIndex);
-//    ROS_ERROR_STREAM("Sector "<<msg->sounding[i].txSectorNumb);//<<" / "<<msg->pingInfo.numTxSectors);//Tilt angle deg : "<<msg->sectorInfo[msg->sounding[i].txSectorNumb].tiltAngleReTx_deg);
     int sector = msg->sounding[i].txSectorNumb;
-//    ROS_ERROR_STREAM("Sector num : "<<sector<<"/"<<msg->pingInfo.numTxSectors);
     if (sector < msg->pingInfo.numTxSectors){
       mb.angleAlongTrack[i] = deg_to_rad(msg->sectorInfo[sector].tiltAngleReTx_deg); // use sector index to get tilt angle, then convert to rad
     }
@@ -561,15 +513,6 @@ KongsbergEM2040::mbraw_to_kmstatus(ds_multibeam_msgs::MultibeamRaw raw)
 }
 
 
-
-//sensor_msgs::Image
-//KongsbergEM2040::mwc_to_image(EMdgmMWC* msg)
-//{
-////  ROS_ERROR_STREAM("MWC to Image!");
-//  return {};
-//}
-
-
 // XXXXXXXXXX
 // Setup Fxns
 // ----------
@@ -613,7 +556,7 @@ KongsbergEM2040::setupParameters()
   DS_D(KongsbergEM2040);
   // m_status parameters
   d->m_status = ds_kongsberg_msgs::KongsbergStatus{};
-  d->m_status.sounder_name = ros::param::param<std::string>("~sounder_name", "EM2040_40");
+  d->m_sounder_name = ros::param::param<std::string>("~sounder_name", "EM2040_40");
   d->m_status.ship_name = ros::param::param<std::string>("~ship_name", "ShipName");
   d->m_status.pu_connected = !ros::param::param<bool>("~run_startup", true);
   d->m_status.bist_directory = ros::param::param<std::string>("~bist_dir", "/home/jvaccaro/");
@@ -634,11 +577,7 @@ KongsbergEM2040::setupParameters()
   d->kmall_max_file_size = 1e9*ros::param::param<int>("~max_kmall_file_GB", 2);
   _new_kmall_file();
 }
-void
-KongsbergEM2040::setupSubscriptions()
-{
-  ds_base::DsProcess::setupSubscriptions();
-}
+
 void
 KongsbergEM2040::setupPublishers()
 {
@@ -706,6 +645,7 @@ bool
 KongsbergEM2040::_ping_cmd(ds_kongsberg_msgs::PingCmd::Request &req, ds_kongsberg_msgs::PingCmd::Response &res)
 {
   DS_D(KongsbergEM2040);
+  std::unique_lock<std::mutex> lck(d->m_status_mutex);
   if (!d->m_status.kctrl_connected){
     res.action += "KCtrl not connected... ";
   }
@@ -741,6 +681,8 @@ KongsbergEM2040::_ping_cmd(ds_kongsberg_msgs::PingCmd::Request &req, ds_kongsber
       break;
     case ds_kongsberg_msgs::PingCmd::Request::PING_NEWFILE_FORCE :
       _new_kmall_file();
+      res.action = "Forced open newfile";
+      break;
     default:
       res.action = "Ping command not recognized";
   }
@@ -762,6 +704,7 @@ bool
 KongsbergEM2040::_bist_cmd(ds_kongsberg_msgs::BistCmd::Request &req, ds_kongsberg_msgs::BistCmd::Response &res)
 {
   DS_D(KongsbergEM2040);
+  std::unique_lock<std::mutex> lck(d->m_status_mutex);
   if (!d->m_status.kctrl_connected
       || !d->m_status.pu_powered
       || !d->m_status.pu_connected){
@@ -872,18 +815,21 @@ void
 KongsbergEM2040::_on_kmall_data(ds_core_msgs::RawData raw)
 {
   DS_D(KongsbergEM2040);
-  d->kmall_timer.stop();
-  d->kmall_timer.start();
-  d->m_status.kmall_connected = true;
   _write_kmall_data(raw);
   if (!parse_data(raw)){
     ROS_ERROR_STREAM("KMAll data parse failed");
+  } else {
+    std::unique_lock<std::mutex> lck(d->m_status_mutex);
+    d->kmall_timer.stop();
+    d->kmall_timer.start();
+    d->m_status.kmall_connected = true;
   }
 }
 void
 KongsbergEM2040::_on_kctrl_data(ds_core_msgs::RawData raw)
 {
   DS_D(KongsbergEM2040);
+  std::unique_lock<std::mutex> lck(d->m_status_mutex);
   d->kctrl_timer.stop();
   d->kctrl_timer.start();
   d->m_status.kctrl_connected = true;
@@ -898,6 +844,11 @@ KongsbergEM2040::_on_kctrl_data(ds_core_msgs::RawData raw)
 void
 KongsbergEM2040::_startup_sequence()
 {
+  DS_D(KongsbergEM2040);
+  std::unique_lock<std::mutex> lck(d->m_status_mutex);
+  d->pu_powered_timer.stop();
+  d->pu_powered_timer.start();
+  d->m_status.pu_powered = true;
   _send_kctrl_command(SIS_TO_K::START);
   _send_kctrl_command(SIS_TO_K::SET_READY);
 }
@@ -905,10 +856,11 @@ std::string
 KongsbergEM2040::_send_kctrl_command(int cmd)
 {
   DS_D(KongsbergEM2040);
+  std::unique_lock<std::mutex> lck(d->m_status_mutex);
   std::stringstream ss;
   ss << "$KSSIS,"
       << cmd << ","
-      << d->m_status.sounder_name;
+      << d->m_sounder_name;
   auto msg = ss.str();
   d->kctrl_conn_->send(msg);
   return msg;
@@ -926,10 +878,11 @@ std::string
 KongsbergEM2040::_send_kctrl_param(std::vector<std::string> params, std::vector<T1> vals)
 {
   DS_D(KongsbergEM2040);
+  std::unique_lock<std::mutex> lck(d->m_status_mutex);
   std::stringstream ss;
   ss << "$KSSIS,"
      << SIS_TO_K::SETVALUES << ","
-     << d->m_status.sounder_name;
+     << d->m_sounder_name;
   for (int i=0; i<params.size(); i++){
     ss << ","
        << params[i] << "="
@@ -944,6 +897,7 @@ void
 KongsbergEM2040::_print_bist(std::string name, std::string status, std::string msg)
 {
   DS_D(KongsbergEM2040);
+  std::unique_lock<std::mutex> lck(d->m_status_mutex);
   if (!d->m_status.bist_running){
     return;
   }
@@ -962,6 +916,7 @@ void
 KongsbergEM2040::_run_next_bist()
 {
   DS_D(KongsbergEM2040);
+  std::unique_lock<std::mutex> lck(d->m_status_mutex);
   if (!d->m_status.bist_running){
     return;
   }
@@ -1002,6 +957,7 @@ void
 KongsbergEM2040::_new_kmall_file()
 {
   DS_D(KongsbergEM2040);
+  std::unique_lock<std::mutex> lck(d->m_status_mutex);
   d->m_status.kmall_filecount ++;
   d->m_status.kmall_filename = filename(d->m_status.kmall_directory,
                                         d->m_status.kmall_filecount,
@@ -1021,6 +977,7 @@ void
 KongsbergEM2040::_write_kmall_data(ds_core_msgs::RawData& raw)
 {
   DS_D(KongsbergEM2040);
+  std::unique_lock<std::mutex> lck(d->m_status_mutex);
   if (d->kmall_stream->is_open()){
     auto size = raw.data.size();
     auto data = reinterpret_cast<const char*>(raw.data.data());
@@ -1041,10 +998,11 @@ void
 KongsbergEM2040::_write_kctrl_xml(ds_core_msgs::RawData& raw)
 {
   DS_D(KongsbergEM2040);
+  std::unique_lock<std::mutex> lck(d->m_status_mutex);
   d->m_status.xml_filecount++;
-  d->m_status.xml_filename = filename(d->m_status.xml_directory,
+  d->m_status.xml_filename = filename(d->m_xml_directory,
                                       d->m_status.xml_filecount,
-                                      d->m_status.sounder_name,
+                                      d->m_sounder_name,
                                       ".xml");
   std::ofstream fs;
   fs.open (d->m_status.xml_filename, std::ios::binary);
@@ -1074,6 +1032,7 @@ void
 KongsbergEM2040::_on_kctrl_timeout(const ros::TimerEvent&)
 {
   DS_D(KongsbergEM2040);
+  std::unique_lock<std::mutex> lck(d->m_status_mutex);
   if (d->m_status.kctrl_connected){
     ROS_ERROR_STREAM("Kctrl timed out... assume totally disconnected");
   }
@@ -1088,6 +1047,7 @@ void
 KongsbergEM2040::_on_pu_powered_timeout(const ros::TimerEvent&)
 {
   DS_D(KongsbergEM2040);
+  std::unique_lock<std::mutex> lck(d->m_status_mutex);
   if (d->m_status.pu_powered){
     ROS_ERROR_STREAM("PU power timed out... assume powered off");
   }
@@ -1101,6 +1061,7 @@ void
 KongsbergEM2040::_on_pu_connected_timeout(const ros::TimerEvent&)
 {
   DS_D(KongsbergEM2040);
+  std::unique_lock<std::mutex> lck(d->m_status_mutex);
   if (d->m_status.pu_connected){
     ROS_ERROR_STREAM("PU connection timed out... assume disconnected");
   }
@@ -1113,6 +1074,7 @@ void
 KongsbergEM2040::_on_kmall_timeout(const ros::TimerEvent&)
 {
   DS_D(KongsbergEM2040);
+  std::unique_lock<std::mutex> lck(d->m_status_mutex);
   if (d->m_status.kmall_connected){
     ROS_ERROR_STREAM("Kmall stream timed out... assume totally disconnected");
   }
@@ -1125,6 +1087,7 @@ void
 KongsbergEM2040::_on_pinging_timeout(const ros::TimerEvent&)
 {
   DS_D(KongsbergEM2040);
+  std::unique_lock<std::mutex> lck(d->m_status_mutex);
   if(d->m_status.pinging){
     ROS_ERROR_STREAM("Ping timed out... assume not pinging");
   }

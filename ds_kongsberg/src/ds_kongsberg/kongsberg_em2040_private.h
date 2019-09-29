@@ -35,6 +35,7 @@
 #define SENTRY_WS_KONGSBERGEM2040_PRIVATE_H
 
 #include "ds_kongsberg/kongsberg_em2040.h"
+#include <mutex>
 
 namespace ds_kongsberg{
 struct KongsbergEM2040Private{
@@ -66,7 +67,14 @@ struct KongsbergEM2040Private{
   // KCtrl startup info
 //  std::string sounder_name_;
 //  bool started_;
+  std::mutex m_status_mutex;
   ds_kongsberg_msgs::KongsbergStatus m_status;
+  // Take out the things from mutex control that ought to be static.
+  // Only use the mutex to change things
+  std::string m_sounder_name;
+  std::string m_xml_directory;
+  std::string m_bist_directory;
+  std::string m_kmall_directory;
 
 //  filename datetime facet;
 //  std::string time_facet_str;

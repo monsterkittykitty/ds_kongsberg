@@ -76,16 +76,12 @@ class KongsbergEM2040 : public ds_base::DsProcess {
 //  static EMdgmMWC read_mwc(uint8_t* bytes);
 //
   static ds_multibeam_msgs::MultibeamRaw mrz_to_mb_raw(EMdgmMRZ* msg);
-//  static ds_multibeam_msgs::MultibeamGrid mb_raw_to_mb_grid(ds_multibeam_msgs::MultibeamRaw* msg);
-//  static ds_multibeam_msgs::MultibeamGridStats mb_raw_to_mb_grid_stats(ds_multibeam_msgs::MultibeamRaw* msg);
-//  static ds_multibeam_msgs::MultibeamFilterStats mb_raw_to_mb_filter_stats(ds_multibeam_msgs::MultibeamRaw* msg);
 //  static sensor_msgs::Image mwc_to_image(EMdgmMWC* msg);
 //  static sensor_msgs::PointCloud2 mb_raw_to_pointcloud(ds_multibeam_msgs::MultibeamRaw* msg);
   void mbraw_to_kmstatus(ds_multibeam_msgs::MultibeamRaw raw);
 
  protected:
   void setupServices() override;
-  void setupSubscriptions() override;
   void setupPublishers() override;
   void setupParameters() override;
   void setupConnections() override;
