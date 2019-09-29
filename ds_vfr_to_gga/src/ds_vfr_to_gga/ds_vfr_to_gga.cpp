@@ -130,17 +130,17 @@ VfrToGga::_on_gga_msg(const ds_core_msgs::RawData& msg)
 {
 }
 
-void
-NavstateToGga::_on_spitter_timer(const ros::TimerEvent&){
-  if (m_is_spitter){
-    ds_nav_msgs::NavState msg;
-    msg.ds_header.io_time = ros::Time::now();
-    msg.header.stamp = msg.ds_header.io_time;
-    msg.lat = -15;
-    msg.lon = 85;
-    msg.down = 20;
-    std::string out_msg = pack_message(msg);
-    m_gga_conn->send(out_msg);
-  }
-}
+//void
+//NavstateToGga::_on_spitter_timer(const ros::TimerEvent&){
+//  if (m_is_spitter){
+//    ds_nav_msgs::NavState msg;
+//    msg.ds_header.io_time = ros::Time::now();
+//    msg.header.stamp = msg.ds_header.io_time;
+//    msg.lat = -15;
+//    msg.lon = 85;
+//    msg.down = 20;
+//    std::string out_msg = pack_message(msg);
+//    m_gga_conn->send(out_msg);
+//  }
+//}
 } //namespace

@@ -69,8 +69,8 @@ class VfrToGga : public ds_base::DsProcess {
   std::string m_beacon1;
   std::string m_beacon2;
   ros::Publisher m_nav_agg_pub;
-  bool m_is_spitter;
-  ross:Timer m_spitter_timer;
+//  bool m_is_spitter;
+//  ros:Timer m_spitter_timer;
 };
 
 }
