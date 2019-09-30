@@ -67,11 +67,12 @@ enum K_TO_SIS{
   VALUES = 401,
   // Other, not documented so these are guesses/unknown?
   KCTRL_VERSION=1,
-  PU_HW_SN = 812, // #IPI
+  STATUS_IPI_PU = 812, // #IPI
   STATUS_INPUTS = 813, // # IPU
   XML = 814,
   UNKNOWN_455 = 455, // DATA STREAM PARAMS
   BIST_RESULT = 817,
+  PU_DISCONNECTED = 998,
 } ;
 
 // IPI LIST

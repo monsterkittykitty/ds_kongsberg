@@ -69,7 +69,6 @@ bool
 KongsbergEM2040::parse_message(ds_core_msgs::RawData& raw)
 {
   DS_D(KongsbergEM2040);
-  std::unique_lock<std::mutex> lck(d->m_status_mutex);
   ds_kongsberg_msgs::KongsbergKSSIS msg;
   // Split on commas and pull specific indexes
   auto str = std::string{ reinterpret_cast<const char*>(raw.data.data()), raw.data.size() };
@@ -96,30 +95,39 @@ KongsbergEM2040::parse_message(ds_core_msgs::RawData& raw)
   switch (msg.type){
     case K_TO_SIS::KCTRL_VERSION :
       if (fields[2] == "KCTRL_VER="){
-
         break;
       }
-    case K_TO_SIS::STATUS_IPI : {
-      std::stringstream ipi(fields[2]);
-      fields.pop_back();
-      while( ipi.good() )
-      {
-        std::string substr;
-        getline( ipi, substr, '~' );
-        if (substr.length()>0)
-          fields.push_back( substr );
-      }
+    case K_TO_SIS::STATUS_IPI :
+      break;
+    case K_TO_SIS::STATUS_IPI_PU : {
+      d->pu_powered_timer.stop();
+      d->pu_powered_timer.start();
+      d->m_status.pu_powered = true;
+//      std::stringstream ipi(fields[2]);
+//      fields.pop_back();
+//      while( ipi.good() )
+//      {
+//        std::string substr;
+//        getline( ipi, substr, '~' );
+//        if (substr.length()>0)
+//          fields.push_back( substr );
+//      }
       if (!d->m_status.pu_connected){
         _startup_sequence();
       }
+      break;
+    }
+    case K_TO_SIS::PU_DISCONNECTED : {
+      ROS_ERROR_STREAM("PU POWERDOWN DETECTED");
+      d->m_status.pu_powered = false;
       break;
     }
     case K_TO_SIS::STATUS_IPU : {
       parse_ipu(fields);
     }
     default :
-      if (msg.type>800){
-        read_kmall_dgm_from_kctrl(msg.type, raw);
+      if (msg.type>800 && msg.type<900){
+        //read_kmall_dgm_from_kctrl(msg.type, raw);
         break;
       }
       if (fields[2] != d->m_sounder_name){
@@ -146,7 +154,6 @@ KongsbergEM2040::parse_ipu(std::vector<std::string> fields)
     return false;
   }
   DS_D(KongsbergEM2040);
-  std::unique_lock<std::mutex> lck(d->m_status_mutex);
   if (fields[2] != d->m_sounder_name){
     ROS_ERROR_STREAM("IPU sounder name doesn't match");
     return false;
@@ -205,7 +212,6 @@ KongsbergEM2040::read_bist_result(ds_core_msgs::RawData& raw)
   auto max_index = raw.data.size();
 
   DS_D(KongsbergEM2040);
-  std::unique_lock<std::mutex> lck(d->m_status_mutex);
   auto message = std::string{ reinterpret_cast<const char*>(ptr + index), max_index - index };
   std::string name;
   bist_strings b;
@@ -231,7 +237,6 @@ KongsbergEM2040::read_kmall_dgm_from_kctrl(int type, ds_core_msgs::RawData& raw)
   stripped_raw.ds_header = raw.ds_header;
 
   DS_D(KongsbergEM2040);
-  std::unique_lock<std::mutex> lck(d->m_status_mutex);
   std::string front = "$KSSIS," + std::to_string(type) + "," + d->m_sounder_name + ",";
   auto index = front.length();
   auto max_index = raw.data.size();
@@ -619,11 +624,11 @@ KongsbergEM2040::setupTimers()
   d->kctrl_timer = nh.createTimer(ros::Duration(3),
                                   &KongsbergEM2040::_on_kctrl_timeout, this);
 
-  auto pu_powered_to = ros::param::param<double>("~pu_powered_timeout", 10.0);
+  auto pu_powered_to = ros::param::param<double>("~pu_powered_timeout", 50.0);
   d->pu_powered_timer = nh.createTimer(ros::Duration(pu_powered_to),
                                        &KongsbergEM2040::_on_pu_powered_timeout, this);
 
-  auto pu_connected_to = ros::param::param<double>("~pu_connected_timeout", 10.0);
+  auto pu_connected_to = ros::param::param<double>("~pu_connected_timeout", 50.0);
   d->pu_connected_timer = nh.createTimer(ros::Duration(pu_connected_to),
                                          &KongsbergEM2040::_on_pu_connected_timeout, this);
 
@@ -645,7 +650,6 @@ bool
 KongsbergEM2040::_ping_cmd(ds_kongsberg_msgs::PingCmd::Request &req, ds_kongsberg_msgs::PingCmd::Response &res)
 {
   DS_D(KongsbergEM2040);
-  std::unique_lock<std::mutex> lck(d->m_status_mutex);
   if (!d->m_status.kctrl_connected){
     res.action += "KCtrl not connected... ";
   }
@@ -704,7 +708,6 @@ bool
 KongsbergEM2040::_bist_cmd(ds_kongsberg_msgs::BistCmd::Request &req, ds_kongsberg_msgs::BistCmd::Response &res)
 {
   DS_D(KongsbergEM2040);
-  std::unique_lock<std::mutex> lck(d->m_status_mutex);
   if (!d->m_status.kctrl_connected
       || !d->m_status.pu_powered
       || !d->m_status.pu_connected){
@@ -829,12 +832,13 @@ void
 KongsbergEM2040::_on_kctrl_data(ds_core_msgs::RawData raw)
 {
   DS_D(KongsbergEM2040);
-  std::unique_lock<std::mutex> lck(d->m_status_mutex);
-  d->kctrl_timer.stop();
-  d->kctrl_timer.start();
-  d->m_status.kctrl_connected = true;
   if (!parse_message(raw)){
     ROS_ERROR_STREAM("KCtrl message parse failed");
+  } else {
+    std::unique_lock<std::mutex> lck(d->m_status_mutex);
+    d->kctrl_timer.stop();
+    d->kctrl_timer.start();
+    d->m_status.kctrl_connected = true;
   }
 }
 
@@ -845,10 +849,6 @@ void
 KongsbergEM2040::_startup_sequence()
 {
   DS_D(KongsbergEM2040);
-  std::unique_lock<std::mutex> lck(d->m_status_mutex);
-  d->pu_powered_timer.stop();
-  d->pu_powered_timer.start();
-  d->m_status.pu_powered = true;
   _send_kctrl_command(SIS_TO_K::START);
   _send_kctrl_command(SIS_TO_K::SET_READY);
 }
@@ -856,7 +856,6 @@ std::string
 KongsbergEM2040::_send_kctrl_command(int cmd)
 {
   DS_D(KongsbergEM2040);
-  std::unique_lock<std::mutex> lck(d->m_status_mutex);
   std::stringstream ss;
   ss << "$KSSIS,"
       << cmd << ","
@@ -878,7 +877,6 @@ std::string
 KongsbergEM2040::_send_kctrl_param(std::vector<std::string> params, std::vector<T1> vals)
 {
   DS_D(KongsbergEM2040);
-  std::unique_lock<std::mutex> lck(d->m_status_mutex);
   std::stringstream ss;
   ss << "$KSSIS,"
      << SIS_TO_K::SETVALUES << ","
@@ -897,7 +895,6 @@ void
 KongsbergEM2040::_print_bist(std::string name, std::string status, std::string msg)
 {
   DS_D(KongsbergEM2040);
-  std::unique_lock<std::mutex> lck(d->m_status_mutex);
   if (!d->m_status.bist_running){
     return;
   }
@@ -916,7 +913,6 @@ void
 KongsbergEM2040::_run_next_bist()
 {
   DS_D(KongsbergEM2040);
-  std::unique_lock<std::mutex> lck(d->m_status_mutex);
   if (!d->m_status.bist_running){
     return;
   }
@@ -957,7 +953,6 @@ void
 KongsbergEM2040::_new_kmall_file()
 {
   DS_D(KongsbergEM2040);
-  std::unique_lock<std::mutex> lck(d->m_status_mutex);
   d->m_status.kmall_filecount ++;
   d->m_status.kmall_filename = filename(d->m_status.kmall_directory,
                                         d->m_status.kmall_filecount,
@@ -977,7 +972,6 @@ void
 KongsbergEM2040::_write_kmall_data(ds_core_msgs::RawData& raw)
 {
   DS_D(KongsbergEM2040);
-  std::unique_lock<std::mutex> lck(d->m_status_mutex);
   if (d->kmall_stream->is_open()){
     auto size = raw.data.size();
     auto data = reinterpret_cast<const char*>(raw.data.data());
@@ -998,7 +992,6 @@ void
 KongsbergEM2040::_write_kctrl_xml(ds_core_msgs::RawData& raw)
 {
   DS_D(KongsbergEM2040);
-  std::unique_lock<std::mutex> lck(d->m_status_mutex);
   d->m_status.xml_filecount++;
   d->m_status.xml_filename = filename(d->m_xml_directory,
                                       d->m_status.xml_filecount,
