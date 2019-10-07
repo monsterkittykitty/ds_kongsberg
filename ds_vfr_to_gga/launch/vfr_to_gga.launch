@@ -1,5 +1,0 @@
-<launch>
-    <rosparam command="load" file="$(find ds_vfr_to_gga)/launch/vfr_to_gga.yaml"/>
-    <node name="vfr_to_gga" pkg="ds_vfr_to_gga" type="ds_vfr_to_gga_node">
-    </node>
-</launch>
