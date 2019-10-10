@@ -127,10 +127,9 @@ KongsbergEM2040::parse_message(ds_core_msgs::RawData& raw)
     }
     default :
       if (msg.type>800 && msg.type<900){
-        //read_kmall_dgm_from_kctrl(msg.type, raw);
         break;
       }
-      if (fields[2] != d->m_sounder_name){
+      if (fields[2] != d->m_status.sounder_name){
         ROS_ERROR_STREAM("Sounder name doesn't match : "<<fields[2]);
         return false;
       }
@@ -154,20 +153,30 @@ KongsbergEM2040::parse_ipu(std::vector<std::string> fields)
     return false;
   }
   DS_D(KongsbergEM2040);
-  if (fields[2] != d->m_sounder_name){
+  if (fields[2] != d->m_status.sounder_name){
     ROS_ERROR_STREAM("IPU sounder name doesn't match");
     return false;
   }
-  d->m_status.cpu_temperature = read_good_bad_missing(fields[4]);
-  d->m_status.position_1 = read_good_bad_missing(fields[5]);
-  d->m_status.position_2 = read_good_bad_missing(fields[6]);
-  d->m_status.position_3 = read_good_bad_missing(fields[7]);
-  d->m_status.attitude_1 = read_good_bad_missing(fields[8]);
-  d->m_status.attitude_2 = read_good_bad_missing(fields[9]);
-  d->m_status.depth = read_good_bad_missing(fields[10]);
-  d->m_status.svp = read_good_bad_missing(fields[11]);
-  d->m_status.time_sync = read_good_bad_missing(fields[12]);
-  d->m_status.pps = read_good_bad_missing(fields[13]);
+//  d->m_status.cpu_temperature = read_good_bad_missing(fields[4]);
+//  d->m_status.position_1 = read_good_bad_missing(fields[5]);
+//  d->m_status.position_2 = read_good_bad_missing(fields[6]);
+//  d->m_status.position_3 = read_good_bad_missing(fields[7]);
+//  d->m_status.attitude_1 = read_good_bad_missing(fields[8]);
+//  d->m_status.attitude_2 = read_good_bad_missing(fields[9]);
+//  d->m_status.depth = read_good_bad_missing(fields[10]);
+//  d->m_status.svp = read_good_bad_missing(fields[11]);
+//  d->m_status.time_sync = read_good_bad_missing(fields[12]);
+//  d->m_status.pps = read_good_bad_missing(fields[13]);
+  d->m_status.cpu_temperature = fields[4];
+  d->m_status.position_1 = fields[5];
+  d->m_status.position_2 = fields[6];
+  d->m_status.position_3 = fields[7];
+  d->m_status.attitude_1 = fields[8];
+  d->m_status.attitude_2 = fields[9];
+  d->m_status.depth = fields[10];
+  d->m_status.svp = fields[11];
+  d->m_status.time_sync = fields[12];
+  d->m_status.pps = fields[13];
 
   d->pu_connected_timer.stop();
   d->pu_connected_timer.start();
@@ -237,7 +246,7 @@ KongsbergEM2040::read_kmall_dgm_from_kctrl(int type, ds_core_msgs::RawData& raw)
   stripped_raw.ds_header = raw.ds_header;
 
   DS_D(KongsbergEM2040);
-  std::string front = "$KSSIS," + std::to_string(type) + "," + d->m_sounder_name + ",";
+  std::string front = "$KSSIS," + std::to_string(type) + "," + d->m_status.sounder_name + ",";
   auto index = front.length();
   auto max_index = raw.data.size();
   stripped_raw.data.resize(max_index-index);
@@ -288,14 +297,12 @@ KongsbergEM2040::parse_data(ds_core_msgs::RawData& raw)
     return false;
   }
 
-  if (msg_type==EM_DGM_I_INSTALLATION_PARAM)
-  {
+  if (msg_type==EM_DGM_I_INSTALLATION_PARAM) {
     record.record_name = "EM_DGM_I_INSTALLATION_PARAM";
     _new_kmall_file();
     _write_kmall_data(raw);
   }
-  else if (msg_type==EM_DGM_I_OP_RUNTIME)
-  {
+  else if (msg_type==EM_DGM_I_OP_RUNTIME) {
     record.record_name = "EM_DGM_I_OP_RUNTIME";
   }
   else if (msg_type==EM_DGM_S_POSITION){
@@ -375,28 +382,24 @@ KongsbergEM2040::read_mrz(uint8_t* ptr, int max_length)
     ROS_ERROR_STREAM("*After header* In read_mrz, count="<<count<<" exceeded max_length="<<max_length);
     return {false, {}};
   }
-
   mrz.partition = *(reinterpret_cast<EMdgmMpartition*>(ptr + count));
   count += sizeof(mrz.partition);
   if (count>max_length){
     ROS_ERROR_STREAM("*After partition* In read_mrz, count="<<count<<" exceeded max_length="<<max_length);
     return {false, {}};
   }
-
   mrz.cmnPart = *(reinterpret_cast<EMdgmMbody*>(ptr + count));
   count += mrz.cmnPart.numBytesCmnPart;
   if (count>max_length){
     ROS_ERROR_STREAM("*After Common Part* In read_mrz, count="<<count<<" exceeded max_length="<<max_length);
     return {false, {}};
   }
-
   mrz.pingInfo = *(reinterpret_cast<EMdgmMRZ_pingInfo*>(ptr + count));
   count += mrz.pingInfo.numBytesInfoData;
   if (count>max_length){
     ROS_ERROR_STREAM("*After Ping Info* In read_mrz, count="<<count<<" exceeded max_length="<<max_length);
     return {false, {}};
   }
-
   for (int i=0; i<mrz.pingInfo.numTxSectors; i++){
     mrz.sectorInfo[i] = *(reinterpret_cast<EMdgmMRZ_txSectorInfo*>(ptr + count));
     count += mrz.pingInfo.numBytesPerTxSector;
@@ -405,39 +408,30 @@ KongsbergEM2040::read_mrz(uint8_t* ptr, int max_length)
       return {false, {}};
     }
   }
-
   mrz.rxInfo = *(reinterpret_cast<EMdgmMRZ_rxInfo*>(ptr + count));
   count += mrz.rxInfo.numBytesRxInfo;
   if (count>max_length){
     ROS_ERROR_STREAM("*After RXInfo* In read_mrz, count="<<count<<" exceeded max_length="<<max_length);
     return {false, {}};
   }
-
   for (int i=0; i<mrz.rxInfo.numExtraDetectionClasses; i++){
     mrz.extraDetClassInfo[i] = *(reinterpret_cast<EMdgmMRZ_extraDetClassInfo*>(ptr + count));
     count += mrz.rxInfo.numBytesPerClass;
-
     if (count>max_length){
       ROS_ERROR_STREAM("*After Extra Det["<<i<<"]* In read_mrz, count="<<count<<" exceeded max_length="<<max_length);
       return {false, {}};
     }
   }
-  ROS_ERROR_STREAM("#MRZ soundings");
   int SIsamples = 0;
   for (int i=0; i<mrz.rxInfo.numSoundingsMaxMain+mrz.rxInfo.numExtraDetections; i++){
     mrz.sounding[i] = *(reinterpret_cast<EMdgmMRZ_sounding*>(ptr + count));
     count += mrz.rxInfo.numBytesPerSounding;
     SIsamples +=mrz.sounding[i].SInumSamples;
-//    ROS_ERROR_STREAM("  mrz.sounding["<<i<<"].SInumSamples: "<<(int)(mrz.sounding[i].SInumSamples));
-//    ROS_ERROR_STREAM("  mrz.sounding["<<i<<"].sectorNumb: "<<(int)(mrz.sounding[i].txSectorNumb));
     if (count>max_length){
       ROS_ERROR_STREAM("*After sounding["<<i<<"]* In read_mrz, count="<<count<<" exceeded max_length="<<max_length);
       return {false, {}};
     }
   }
-//  ROS_ERROR_STREAM("#MRZ Seafloor Image: " << SIsamples);
-  // Actual number of seabed image samples (SIsample_desidB) to be found by summing
-  // parameter SInumSamples in struct EMdgmMRZ_sounding_def for all beams.
   for (int i=0; i<SIsamples; i++){
     mrz.SIsample_desidB[i] = *(reinterpret_cast<uint16_t*>(ptr + count));
     count += sizeof(uint16_t);
@@ -446,7 +440,6 @@ KongsbergEM2040::read_mrz(uint8_t* ptr, int max_length)
       return {false, {}};
     }
   }
-//  ROS_ERROR_STREAM("Success! MRZ read completely "<<count<<"/"<<max_length);
   return {true, mrz};
 }
 
@@ -561,7 +554,7 @@ KongsbergEM2040::setupParameters()
   DS_D(KongsbergEM2040);
   // m_status parameters
   d->m_status = ds_kongsberg_msgs::KongsbergStatus{};
-  d->m_sounder_name = ros::param::param<std::string>("~sounder_name", "EM2040_40");
+  d->m_status.sounder_name = ros::param::param<std::string>("~sounder_name", "EM2040_40");
   d->m_status.ship_name = ros::param::param<std::string>("~ship_name", "ShipName");
   d->m_status.pu_connected = !ros::param::param<bool>("~run_startup", true);
   d->m_status.bist_directory = ros::param::param<std::string>("~bist_dir", "/home/jvaccaro/");
@@ -579,7 +572,7 @@ KongsbergEM2040::setupParameters()
   d->m_status.pps = d->m_status.SENSOR_MISSING;
   // other parameters
   d->kmall_max_buffer_size = 1e3*ros::param::param<int>("~max_kmall_buffer_kB", 30);
-  d->kmall_max_file_size = 1e9*ros::param::param<int>("~max_kmall_file_GB", 2);
+  d->kmall_max_file_size = 1e6*ros::param::param<int>("~max_kmall_file_MB", 400);
   _new_kmall_file();
 }
 
@@ -735,6 +728,7 @@ KongsbergEM2040::_bist_cmd(ds_kongsberg_msgs::BistCmd::Request &req, ds_kongsber
     case ds_kongsberg_msgs::BistCmd::Request::BIST_CANCEL :
       if (d->m_status.bist_running){
         d->m_status.bist_progress = d->bist_tests.size()-1;
+        _run_next_bist();
         res.action = "BIST commanded to cancel!";
         return true;
       } else {
@@ -859,7 +853,7 @@ KongsbergEM2040::_send_kctrl_command(int cmd)
   std::stringstream ss;
   ss << "$KSSIS,"
       << cmd << ","
-      << d->m_sounder_name;
+      << d->m_status.sounder_name;
   auto msg = ss.str();
   d->kctrl_conn_->send(msg);
   return msg;
@@ -880,7 +874,7 @@ KongsbergEM2040::_send_kctrl_param(std::vector<std::string> params, std::vector<
   std::stringstream ss;
   ss << "$KSSIS,"
      << SIS_TO_K::SETVALUES << ","
-     << d->m_sounder_name;
+     << d->m_status.sounder_name;
   for (int i=0; i<params.size(); i++){
     ss << ","
        << params[i] << "="
@@ -931,9 +925,10 @@ KongsbergEM2040::_run_next_bist()
   }
   if (d->m_status.bist_progress < d->bist_tests.size() ){
     ROS_INFO_STREAM("Running BIST ... "<< d->bist_tests[d->m_status.bist_progress]);
+    d->m_status.bist_current = d->bist_tests[d->m_status.bist_progress];
     // Send the next command
     _send_kctrl_param("INST_PARAM_BIST_DO", d->bist_tests[d->m_status.bist_progress]);
-  } else if (d->m_status.bist_progress == d->bist_tests.size()){
+  } else if (d->m_status.bist_progress >= d->bist_tests.size()){
     std::ofstream fs;
     fs.open (d->m_status.bist_filename, std::ios::app);
     fs << "\nXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\n\n";
@@ -944,9 +939,7 @@ KongsbergEM2040::_run_next_bist()
     ROS_INFO_STREAM("BIST done! \n"<<d->bist_summary_stream.str()<<"Full results in "<<d->m_status.bist_filename);
     d->bist_tests.resize(0);
     d->m_status.bist_running = false;
-  } else {
-    ROS_ERROR_STREAM("BIST out of range! Cancelling!");
-    d->m_status.bist_running = false;
+    d->m_status.bist_current = "";
   }
 }
 void
@@ -965,6 +958,7 @@ KongsbergEM2040::_new_kmall_file()
   }
   d->kmall_stream->open (d->m_status.kmall_filename, std::ios::out | std::ios::binary);
   d->kmall_buffer_size = 0;
+  d->kmall_file_size = 0;
   d->m_status.kmall_filesize_kB = 0;
   ROS_ERROR_STREAM("New kmall file: " << d->m_status.kmall_filename);
 }
@@ -977,9 +971,9 @@ KongsbergEM2040::_write_kmall_data(ds_core_msgs::RawData& raw)
     auto data = reinterpret_cast<const char*>(raw.data.data());
     d->kmall_stream->write(data, size);
     d->kmall_buffer_size += size;
-    d->m_status.kmall_filesize_kB += size;
-    if (d->m_status.kmall_filesize_kB > d->kmall_max_file_size){
-//      _new_kmall_file();
+    d->kmall_file_size += size;
+    d->m_status.kmall_filesize_kB += d->kmall_file_size / 1e3;
+    if (d->kmall_file_size > d->kmall_max_file_size){
       _send_kctrl_command(SIS_TO_K::LOG_IOP_SVP);
     } else if (d->kmall_buffer_size > d->kmall_max_buffer_size){
       d->kmall_stream->flush();
@@ -995,7 +989,7 @@ KongsbergEM2040::_write_kctrl_xml(ds_core_msgs::RawData& raw)
   d->m_status.xml_filecount++;
   d->m_status.xml_filename = filename(d->m_xml_directory,
                                       d->m_status.xml_filecount,
-                                      d->m_sounder_name,
+                                      d->m_status.sounder_name,
                                       ".xml");
   std::ofstream fs;
   fs.open (d->m_status.xml_filename, std::ios::binary);

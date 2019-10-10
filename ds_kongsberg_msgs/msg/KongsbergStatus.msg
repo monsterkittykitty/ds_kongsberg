@@ -15,6 +15,7 @@ bool pinging
 
 # BIST
 bool bist_running
+string bist_current
 uint8 bist_progress
 uint16 bist_count
 string bist_filename
@@ -24,7 +25,7 @@ string bist_directory
 uint8 kmall_filecount
 string kmall_filename
 string kmall_directory
-uint16 kmall_filesize_kB
+uint64 kmall_filesize_kB
 uint16 xml_filecount
 string xml_filename
 string xml_directory
@@ -37,19 +38,19 @@ uint8 SENSOR_OFF = 3
 uint8 SENSOR_ACTIVE_BAD = 4
 uint8 SENSOR_BAD = 5
 
-uint8 cpu_temperature
-uint8 position_1
-uint8 position_2
-uint8 position_3
-uint8 attitude_1
-uint8 attitude_2
-uint8 depth
-uint8 svp
-uint8 time_sync
-uint8 pps
-bool sensors_all_good
-bool sensors_any_missing
-bool sensors_any_bad
+string cpu_temperature
+string position_1
+string position_2
+string position_3
+string attitude_1
+string attitude_2
+string depth
+string svp
+string time_sync
+string pps
+# bool sensors_all_good
+# bool sensors_any_missing
+# bool sensors_any_bad
 
 # Runtime params
 # depth settings

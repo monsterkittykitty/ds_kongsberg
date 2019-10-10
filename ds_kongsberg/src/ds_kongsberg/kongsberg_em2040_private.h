@@ -94,7 +94,8 @@ struct KongsbergEM2040Private{
 //  float kmall_current_size_gb;
   // all in bytes
 //  long int  kmall_file_size;
-  long int kmall_buffer_size, kmall_max_buffer_size, kmall_max_file_size;
+  // All size values in bytes
+  long int kmall_buffer_size, kmall_max_buffer_size, kmall_file_size, kmall_max_file_size;
 
   //BIST
 //  bool bist_running = false;
