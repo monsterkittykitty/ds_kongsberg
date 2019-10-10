@@ -589,6 +589,21 @@ KongsbergEM2040::setupParameters()
   d->m_status.svp = "";
   d->m_status.time_sync = "";
   d->m_status.pps = "";
+  d->m_status.rt_force_depth = "0";
+  d->m_status.rt_min_depth = "0";
+  d->m_status.rt_max_depth = "0";
+  d->m_status.rt_ping_freq = "0";
+  d->m_status.rt_depth_mode = "0";
+  d->m_status.rt_detector_mode = "0";
+  d->m_status.rt_fm_disable = "0";
+  d->m_status.rt_log_watercol = "0";
+  d->m_status.rt_extra_detect = "0";
+  d->m_status.rt_pitch_stab = "0";
+  d->m_status.rt_tx_angle_along = "0";
+  d->m_status.rt_yaw_stab = "0";
+  d->m_status.rt_max_ping_rate = "0";
+  d->m_status.rt_min_swath_distance = "0";
+  d->m_status.rt_trigger = "0";
   // other parameters
   d->kmall_max_buffer_size = 1e3*ros::param::param<int>("~max_kmall_buffer_kB", 30);
   d->kmall_max_file_size = 1e6*ros::param::param<int>("~max_kmall_file_MB", 400);
