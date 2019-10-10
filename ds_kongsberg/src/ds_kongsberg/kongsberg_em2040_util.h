@@ -53,7 +53,7 @@ string_split_out_xml_params(std::string data, std::string token_param="ID", std:
   std::string delim_end = "</" + token_delim + ">";
   std::string param{};
   std::string value{};
-  while(std::getline(ss,l,'\n')){
+  while(std::getline(ss >> std::ws, l,'\n')){
     if (!l.find(param_start)){
       param = l.substr(param_start.length(), l.length() - param_start.size() - param_end.length());
     } else if (!l.find(value_start)) {

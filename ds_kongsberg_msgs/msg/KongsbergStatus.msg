@@ -31,12 +31,12 @@ string xml_filename
 string xml_directory
 
 # Health and sensors
-uint8 SENSOR_UNKNOWN = 0
-uint8 SENSOR_OK = 1
-uint8 SENSOR_MISSING = 2
-uint8 SENSOR_OFF = 3
-uint8 SENSOR_ACTIVE_BAD = 4
-uint8 SENSOR_BAD = 5
+# uint8 SENSOR_UNKNOWN = 0
+# uint8 SENSOR_OK = 1
+# uint8 SENSOR_MISSING = 2
+# uint8 SENSOR_OFF = 3
+# uint8 SENSOR_ACTIVE_BAD = 4
+# uint8 SENSOR_BAD = 5
 
 string cpu_temperature
 string position_1
@@ -48,30 +48,30 @@ string depth
 string svp
 string time_sync
 string pps
-# bool sensors_all_good
+bool sensors_all_good
 # bool sensors_any_missing
 # bool sensors_any_bad
 
 # Runtime params
 # depth settings
-float32 rt_force_depth
-uint8 rt_min_depth
-uint8 rt_max_depth
-uint16 rt_ping_freq
-string rt_depth_mode
-string rt_detector_mode
-bool rt_fm_disable
-bool rt_log_watercol
-bool rt_extra_detect
+string rt_force_depth #
+string rt_min_depth #
+string rt_max_depth #
+string rt_ping_freq #
+string rt_depth_mode #
+string rt_detector_mode #
+string rt_fm_disable #
+string rt_log_watercol
+string rt_extra_detect #
 
 # txmit params
-bool rt_pitch_stab
-float32 rt_tx_angle_along
-string rt_yaw_stab
-string rt_heading_filter
-float32 rt_max_ping_rate
-uint16 rt_min_swath_distance
-bool rt_trigger
+string rt_pitch_stab #
+string rt_tx_angle_along #
+string rt_yaw_stab #
+# string rt_heading_filter # VALUE NOT FOUND, WILL BE EMPTY
+string rt_max_ping_rate #
+string rt_min_swath_distance #
+string rt_trigger #
 
 # Latest ping
 uint16 ping_num

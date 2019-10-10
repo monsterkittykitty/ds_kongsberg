@@ -127,6 +127,7 @@ KongsbergEM2040::parse_message(ds_core_msgs::RawData& raw)
     }
     default :
       if (msg.type>800 && msg.type<900){
+        read_kmall_dgm_from_kctrl(msg.type, raw);
         break;
       }
       if (fields[2] != d->m_status.sounder_name){
@@ -188,25 +189,25 @@ KongsbergEM2040::parse_ipu(std::vector<std::string> fields)
 uint8_t
 KongsbergEM2040::read_good_bad_missing(std::string msg)
 {
-  boost::smatch results;
-  auto good = boost::regex{ "=OK;G" };
-  auto missing = boost::regex{ "=MISSING;R" };
-  auto activebad = boost::regex{ "=ACTIVE-BAD;R" };
-  auto bad = boost::regex{ "=BAD;R" };
-  auto off = boost::regex{ "=OFF;B" };
-  if (boost::regex_search(msg, results, good)){
-    return ds_kongsberg_msgs::KongsbergStatus::SENSOR_OK;
-  }
-  if (boost::regex_search(msg, results, missing)){
-    return ds_kongsberg_msgs::KongsbergStatus::SENSOR_MISSING;
-  }
-  if (boost::regex_search(msg, results, activebad)
-      || boost::regex_search(msg, results, bad)){
-    return ds_kongsberg_msgs::KongsbergStatus::SENSOR_BAD;
-  }
-  if (boost::regex_search(msg, results, off)){
-    return ds_kongsberg_msgs::KongsbergStatus::SENSOR_OFF;
-  }
+//  boost::smatch results;
+//  auto good = boost::regex{ "=OK;G" };
+//  auto missing = boost::regex{ "=MISSING;R" };
+//  auto activebad = boost::regex{ "=ACTIVE-BAD;R" };
+//  auto bad = boost::regex{ "=BAD;R" };
+//  auto off = boost::regex{ "=OFF;B" };
+//  if (boost::regex_search(msg, results, good)){
+//    return ds_kongsberg_msgs::KongsbergStatus::SENSOR_OK;
+//  }
+//  if (boost::regex_search(msg, results, missing)){
+//    return ds_kongsberg_msgs::KongsbergStatus::SENSOR_MISSING;
+//  }
+//  if (boost::regex_search(msg, results, activebad)
+//      || boost::regex_search(msg, results, bad)){
+//    return ds_kongsberg_msgs::KongsbergStatus::SENSOR_BAD;
+//  }
+//  if (boost::regex_search(msg, results, off)){
+//    return ds_kongsberg_msgs::KongsbergStatus::SENSOR_OFF;
+//  }
   return 0;
 }
 
@@ -219,12 +220,16 @@ KongsbergEM2040::read_bist_result(ds_core_msgs::RawData& raw)
   r = *reinterpret_cast<dgm_IB*>(ptr);
   int index = sizeof(r) - 2;
   auto max_index = raw.data.size();
+  if (max_index < index){
+    return false;
+  }
 
   DS_D(KongsbergEM2040);
   auto message = std::string{ reinterpret_cast<const char*>(ptr + index), max_index - index };
   std::string name;
   bist_strings b;
   name = b.get_name_from_code(r.BISTNumber);
+  ROS_ERROR_STREAM("RECEIVED BIST "<<name);
   std::string status;
   if (r.BISTStatus == 0)
     status = "PASS";
@@ -237,6 +242,7 @@ KongsbergEM2040::read_bist_result(ds_core_msgs::RawData& raw)
     _print_bist(name, status, message);
     _run_next_bist();
   }
+  return true;
 }
 bool
 KongsbergEM2040::read_kmall_dgm_from_kctrl(int type, ds_core_msgs::RawData& raw)
@@ -249,6 +255,9 @@ KongsbergEM2040::read_kmall_dgm_from_kctrl(int type, ds_core_msgs::RawData& raw)
   std::string front = "$KSSIS," + std::to_string(type) + "," + d->m_status.sounder_name + ",";
   auto index = front.length();
   auto max_index = raw.data.size();
+  if (index > max_index){
+    return false;
+  }
   stripped_raw.data.resize(max_index-index);
 
   for (int i=0; i<max_index-index; i++){
@@ -262,9 +271,8 @@ KongsbergEM2040::read_kmall_dgm_from_kctrl(int type, ds_core_msgs::RawData& raw)
       read_bist_result(stripped_raw);
       return true;
     default:
-      break;
+      return false;
   }
-  return false;
 }
 
 // XXXXXXXXXXXXX
@@ -487,14 +495,22 @@ KongsbergEM2040::mbraw_to_kmstatus(ds_multibeam_msgs::MultibeamRaw raw)
   float max_range = 0;
   float min_depth = 100;
   float max_depth = 0;
+  float center_angle = 100;
+  float center_range = 0;
+  float center_depth = 0;
   ranges.resize(num_soundings);
   depths.resize(num_soundings);
   for (int i=0; i<num_soundings; i++){
-    if (raw.beamflag[i] == raw.BEAM_BAD_SONAR){
+    if (raw.beamflag[i] != raw.BEAM_BAD_SONAR){
       num_good ++;
     }
     ranges[i] = raw.soundspeed*raw.twowayTravelTime[i] / 2.0;
     depths[i] = ranges[i]*cos(raw.angleAlongTrack[i])*cos(raw.angleAcrossTrack[i]);
+    if (abs(raw.angleAcrossTrack[i]) < abs(center_angle)){
+      center_angle = raw.angleAcrossTrack[i];
+      center_range = ranges[i];
+      center_depth = depths[i];
+    }
     min_range = (ranges[i] < min_range ? ranges[i] : min_range);
     max_range = (ranges[i] > max_range ? ranges[i] : max_range);
     min_depth = (depths[i] < min_depth ? depths[i] : min_depth);
@@ -502,11 +518,14 @@ KongsbergEM2040::mbraw_to_kmstatus(ds_multibeam_msgs::MultibeamRaw raw)
   }
   DS_D(KongsbergEM2040);
   // ping num populated earlier
+  d->m_status.num_soundings = num_soundings;
   d->m_status.percent_good = num_good / static_cast<float>(num_soundings);
   d->m_status.min_depth = min_depth;
   d->m_status.max_depth = max_depth;
+  d->m_status.center_depth = center_depth;
   d->m_status.min_range = min_range;
   d->m_status.max_range = max_range;
+  d->m_status.center_range = center_range;
   d->kmstatus_pub_.publish(d->m_status);
 }
 
@@ -560,16 +579,16 @@ KongsbergEM2040::setupParameters()
   d->m_status.bist_directory = ros::param::param<std::string>("~bist_dir", "/home/jvaccaro/");
   d->m_status.kmall_directory = ros::param::param<std::string>("~kmall_dir", "/home/jvaccaro/");
   d->m_status.xml_directory = ros::param::param<std::string>("~xml_dir", "/home/jvaccaro/");
-  d->m_status.cpu_temperature = d->m_status.SENSOR_MISSING;
-  d->m_status.position_1 =  d->m_status.SENSOR_MISSING;
-  d->m_status.position_2 =  d->m_status.SENSOR_MISSING;
-  d->m_status.position_3 = d->m_status.SENSOR_MISSING;
-  d->m_status.attitude_1 = d->m_status.SENSOR_MISSING;
-  d->m_status.attitude_2 = d->m_status.SENSOR_MISSING;
-  d->m_status.depth = d->m_status.SENSOR_MISSING;
-  d->m_status.svp = d->m_status.SENSOR_MISSING;
-  d->m_status.time_sync = d->m_status.SENSOR_MISSING;
-  d->m_status.pps = d->m_status.SENSOR_MISSING;
+  d->m_status.cpu_temperature = "";
+  d->m_status.position_1 =  "";
+  d->m_status.position_2 =  "";
+  d->m_status.position_3 = "";
+  d->m_status.attitude_1 = "";
+  d->m_status.attitude_2 = "";
+  d->m_status.depth = "";
+  d->m_status.svp = "";
+  d->m_status.time_sync = "";
+  d->m_status.pps = "";
   // other parameters
   d->kmall_max_buffer_size = 1e3*ros::param::param<int>("~max_kmall_buffer_kB", 30);
   d->kmall_max_file_size = 1e6*ros::param::param<int>("~max_kmall_file_MB", 400);
@@ -986,6 +1005,7 @@ void
 KongsbergEM2040::_write_kctrl_xml(ds_core_msgs::RawData& raw)
 {
   DS_D(KongsbergEM2040);
+  auto xml_string = std::string{ reinterpret_cast<const char*>(raw.data.data()), raw.data.size() };
   d->m_status.xml_filecount++;
   d->m_status.xml_filename = filename(d->m_xml_directory,
                                       d->m_status.xml_filecount,
@@ -993,9 +1013,62 @@ KongsbergEM2040::_write_kctrl_xml(ds_core_msgs::RawData& raw)
                                       ".xml");
   std::ofstream fs;
   fs.open (d->m_status.xml_filename, std::ios::binary);
-  fs << std::string{ reinterpret_cast<const char*>(raw.data.data()), raw.data.size() };
+  fs << xml_string;
   fs.close();
   ROS_ERROR_STREAM("Logged XML in "<<d->m_status.xml_filename);
+  // Now look for some important key-value pairs
+  std::vector<std::string> params, vals;
+  std::tie(params, vals) = string_split_out_xml_params(xml_string);
+  if (params.size() != vals.size()){
+    ROS_ERROR_STREAM("Bad XML received, logged anyways");
+    return;
+  }
+  for (int i=0; i<params.size(); i++){
+    if (params[i] == "SDPM1") {
+      ROS_INFO_STREAM("PING FREQ: " << params[i] << " val: " << vals[i]);
+      d->m_status.rt_ping_freq = vals[i];
+    } else if (params[i] == "SDFD") {
+      ROS_INFO_STREAM("FORCE DEPTH param: "<<params[i]<<" val: "<<vals[i]);
+      d->m_status.rt_force_depth = vals[i];
+    } else if (params[i] == "SDMA") {
+      ROS_INFO_STREAM("MAX DEPTH param: "<<params[i]<<" val: "<<vals[i]);
+      d->m_status.rt_max_depth = vals[i];
+    } else if (params[i] == "SDMI") {
+      ROS_INFO_STREAM("MIN DEPTH param: " << params[i] << " val: " << vals[i]);
+      d->m_status.rt_min_depth = vals[i];
+    } else if (params[i] == "SDDM") {
+      ROS_INFO_STREAM("DETECTOR MODE param: "<<params[i]<<" val: "<<vals[i]);
+      d->m_status.rt_detector_mode = vals[i];
+    } else if (params[i] == "SDFM") {
+      ROS_INFO_STREAM("FM DISABLE param: " << params[i] << " val: " << vals[i]);
+      d->m_status.rt_fm_disable = vals[i];
+    } else if (params[i] == "SDED") {
+      ROS_INFO_STREAM("EXTRA DETECT param: "<<params[i]<<" val: "<<vals[i]);
+      d->m_status.rt_extra_detect = vals[i];
+    } else if (params[i] == "SDPT1") {
+      ROS_INFO_STREAM("DEPTH MODE param: "<<params[i]<<" val: "<<vals[i]);
+      d->m_status.rt_depth_mode = vals[i];
+    } else if (params[i] == "STET") {
+      ROS_INFO_STREAM("TRIGGER param: "<<params[i]<<" val: "<<vals[i]);
+      d->m_status.rt_trigger = vals[i];
+    } else if (params[i] == "STYAMO") {
+      ROS_INFO_STREAM("YAW STAB param: "<<params[i]<<" val: "<<vals[i]);
+      d->m_status.rt_yaw_stab = vals[i];
+    } else if (params[i] == "STXA") {
+      ROS_INFO_STREAM("TX ANGLE param: " << params[i] << " val: " << vals[i]);
+      d->m_status.rt_tx_angle_along = vals[i];
+    } else if (params[i] == "STPS") {
+      ROS_INFO_STREAM("PITCH STAB param: " << params[i] << " val: " << vals[i]);
+      d->m_status.rt_pitch_stab = vals[i];
+    } else if (params[i] == "STPF") {
+      ROS_INFO_STREAM("PING RATE param: " << params[i] << " val: " << vals[i]);
+      d->m_status.rt_max_ping_rate = vals[i];
+    } else if (params[i] == "STPK") {
+      ROS_INFO_STREAM("MIN SWATH param: " << params[i] << " val: " << vals[i]);
+      d->m_status.rt_min_swath_distance = vals[i];
+    }
+  }
+  d->kmstatus_pub_.publish(d->m_status);
 }
 
 std::string

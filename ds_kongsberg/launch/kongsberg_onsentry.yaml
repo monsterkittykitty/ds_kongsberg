@@ -19,7 +19,6 @@ kongsberg:
   settings_service: settings_cmd
   bist_service: bist_cmd
   xml_service: load_xml_cmd
-#  values_service: values_cmd
   # Publishers
   mbraw_topic: mbraw
   offset_topic: pu_time_offset
@@ -27,7 +26,6 @@ kongsberg:
   kssis_topic: kssis_records
   kmstatus_topic: kmstatus
   kmall_records_topic: kmall_records
-#  wc_topic: wc
   # Data inputs
   sounder_name: EM2040_130
   run_startup: false
@@ -36,7 +34,7 @@ kongsberg:
   kmall_dir: /data/kongsberg/kmall/
   xml_dir: /data/kongsberg/xml/
   max_kmall_buffer_kB: 30
-  max_kmall_file_GB: 2
+  max_kmall_file_MB: 400
   # Timeouts
   kmall_timeout: 3.0
   kctrl_timeout: 3.0
