@@ -531,7 +531,10 @@ KongsbergEM2040::read_mrz(uint8_t* ptr, int max_length)
       return {false, {}};
     }
   }
+  auto check_length = *(reinterpret_cast<uint32_t*>(ptr + count));
+  count += sizeof(uint32_t);
   ROS_ERROR_STREAM("Count: " << count << " max_length: "<<max_length);
+  ROS_ERROR_STREAM("Header len: " << mrz.header.numBytesDgm << " Check len: "<<check_length);
   return {true, mrz};
 }
 
