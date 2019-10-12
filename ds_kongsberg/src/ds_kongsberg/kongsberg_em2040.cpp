@@ -371,6 +371,9 @@ KongsbergEM2040::parse_data(ds_core_msgs::RawData& raw)
       }
 //      d->kmall_record_pub_.publish(record);
 //      return true;
+    } else {
+      record.record_name = "EM_DGM_M_RANGE_AND_DEPTH P";
+      ROS_ERROR_STREAM("PING PARTITION");
     }
   }
   else if (msg_type==EM_DGM_M_WATER_COLUMN){
@@ -426,6 +429,7 @@ KongsbergEM2040::check_and_append_mpartition(ds_core_msgs::RawData raw_p)
     partition->numOfDgms = 1;
     d->kmall_partitioned.data.resize(max_length);
     d->kmall_partitioned.data = raw_p.data;
+    ROS_ERROR_STREAM("Found partition piece "<<partition->dgmNum<< " of "<<partition->numOfDgms << " with size "<<max_length);
     return {false, {}};
   }
   // If it's a following datagram, then append it starting AFTER the partition.
@@ -527,6 +531,7 @@ KongsbergEM2040::read_mrz(uint8_t* ptr, int max_length)
       return {false, {}};
     }
   }
+  ROS_ERROR_STREAM("Count: " << count << " max_length: "<<max_length);
   return {true, mrz};
 }
 
