@@ -291,6 +291,7 @@ KongsbergEM2040::parse_data(ds_core_msgs::RawData& raw)
 
   uint8_t* bytes_ptr = raw.data.data();
   auto hdr = reinterpret_cast<EMdgmHeader*>(bytes_ptr);
+  ROS_ERROR_STREAM("TIME: "<<hdr->time_sec);
   std::string msg_type(hdr->dgmType, hdr->dgmType + sizeof(hdr->dgmType)/sizeof(hdr->dgmType[0]));
 
   ds_kongsberg_msgs::KongsbergKMAllRecord record;
@@ -536,7 +537,7 @@ KongsbergEM2040::read_mrz(uint8_t* ptr, int max_length)
   count += sizeof(uint32_t);
   ROS_ERROR_STREAM("Count: " << count << " max_length: "<<max_length);
   ROS_ERROR_STREAM("Header len: " << mrz.header.numBytesDgm << " Check len: "<<check_length);
-  ROS_ERROR_STREAM("TIME: "<<mrz.header.time_sec);
+//  ROS_ERROR_STREAM("TIME: "<<mrz.header.time_sec);
   return {true, mrz};
 }
 
