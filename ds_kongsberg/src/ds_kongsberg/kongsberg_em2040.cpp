@@ -440,8 +440,8 @@ KongsbergEM2040::check_and_append_mpartition(ds_core_msgs::RawData raw_p)
     }
     // Resize and copy everything except the new header/partition
     // Overwrite the ending values for the length
-    d->kmall_partitioned.data.resize(current_length + max_length - count - 2);
-    memcpy(ptr + count, d->kmall_partitioned.data.data() + current_length - 2, max_length - count);
+    d->kmall_partitioned.data.resize(current_length + max_length - count - 4);
+    memcpy(ptr + count, d->kmall_partitioned.data.data() + current_length - 4, max_length - count);
     ROS_ERROR_STREAM("Found partition piece "<<partition->dgmNum<< " of "<<partition->numOfDgms << " with size "<<max_length);
   }
   // If the datagram has completed transmission, then return the partitioned data message.
@@ -450,7 +450,7 @@ KongsbergEM2040::check_and_append_mpartition(ds_core_msgs::RawData raw_p)
     auto data_size = d->kmall_partitioned.data.size();
     auto starting_size_ptr = reinterpret_cast<uint32_t*>(data_ptr);
     *starting_size_ptr = data_size;
-    auto ending_size_ptr = reinterpret_cast<uint16_t*>(d->kmall_partitioned.data.data() + d->kmall_partitioned.data.size() - 4);
+    auto ending_size_ptr = reinterpret_cast<uint32_t*>(d->kmall_partitioned.data.data() + d->kmall_partitioned.data.size() - 4);
     *ending_size_ptr = data_size;
     ROS_ERROR_STREAM("Partition complete! Total size "<< data_size<<" bytes");
     return {true, d->kmall_partitioned};
