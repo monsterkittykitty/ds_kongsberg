@@ -537,7 +537,7 @@ KongsbergEM2040::read_mrz(uint8_t* ptr, int max_length)
   count += sizeof(uint32_t);
   ROS_ERROR_STREAM("Count: " << count << " max_length: "<<max_length);
   ROS_ERROR_STREAM("Header len: " << mrz.header.numBytesDgm << " Check len: "<<check_length);
-//  ROS_ERROR_STREAM("TIME: "<<mrz.header.time_sec);
+  ROS_ERROR_STREAM("PING TIME: "<<mrz.header.time_sec);
   return {true, mrz};
 }
 
