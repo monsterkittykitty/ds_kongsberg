@@ -71,10 +71,10 @@ struct KongsbergEM2040Private{
   ds_kongsberg_msgs::KongsbergStatus m_status;
   // Take out the things from mutex control that ought to be static.
   // Only use the mutex to change things
-  std::string m_sounder_name;
-  std::string m_xml_directory;
-  std::string m_bist_directory;
-  std::string m_kmall_directory;
+//  std::string m_sounder_name;
+//  std::string m_xml_directory;
+//  std::string m_bist_directory;
+//  std::string m_kmall_directory;
 
 //  filename datetime facet;
 //  std::string time_facet_str;
@@ -89,6 +89,9 @@ struct KongsbergEM2040Private{
 //  std::string kmall_filename;
 //  std::string kmall_filename_base;
   std::ofstream* kmall_stream = NULL;
+  // If there's a larger kmall datagram that gets partitioned, we need to fix it
+
+  ds_core_msgs::RawData kmall_partitioned;
 //  int kmall_file_count = 0;
 //  float kmall_max_size_gb;
 //  float kmall_current_size_gb;

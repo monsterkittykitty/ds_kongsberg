@@ -312,18 +312,23 @@ KongsbergEM2040::parse_data(ds_core_msgs::RawData& raw)
   }
   else if (msg_type==EM_DGM_I_OP_RUNTIME) {
     record.record_name = "EM_DGM_I_OP_RUNTIME";
+    _write_kmall_data(raw);
   }
   else if (msg_type==EM_DGM_S_POSITION){
     record.record_name = "EM_DGM_S_POSITION";
+    _write_kmall_data(raw);
   }
   else if (msg_type==EM_DGM_S_KM_BINARY){
     record.record_name = "EM_DGM_S_KM_BINARY";
+    _write_kmall_data(raw);
   }
   else if (msg_type==EM_DGM_S_SOUND_VELOCITY_PROFILE){
     record.record_name = "EM_DGM_S_SOUND_VELOCITY_PROFILE";
+    _write_kmall_data(raw);
   }
   else if (msg_type==EM_DGM_S_SOUND_VELOCITY_TRANSDUCER){
     record.record_name = "EM_DGM_S_SOUND_VELOCITY_TRANSDUCER";
+    _write_kmall_data(raw);
   }
   else if (msg_type==EM_DGM_S_CLOCK){
     record.record_name = "EM_DGM_S_CLOCK";
@@ -332,49 +337,123 @@ KongsbergEM2040::parse_data(ds_core_msgs::RawData& raw)
     offset.ds_header = record.ds_header;
     offset.device_stamp_minus_ros_stamp_sec = offset.header.stamp.toSec() - offset.ds_header.io_time.toSec();
     d->offset_pub_.publish(offset);
+    _write_kmall_data(raw);
   }
   else if (msg_type==EM_DGM_S_DEPTH){
     record.record_name = "EM_DGM_S_DEPTH";
+    _write_kmall_data(raw);
   }
   else if (msg_type==EM_DGM_S_HEIGHT){
     record.record_name = "EM_DGM_S_HEIGHT";
+    _write_kmall_data(raw);
   }
   else if (msg_type==EM_DGM_M_RANGE_AND_DEPTH){
     d->pinging_timer.stop();
     d->pinging_timer.start();
     d->m_status.pinging = true;
     record.record_name = "EM_DGM_M_RANGE_AND_DEPTH";
-    EMdgmMRZ mrz;
-    bool ok = false;
-    std::tie(ok, mrz) = read_mrz(bytes_ptr,data_size);
-    if (ok){
-      auto mbr = mrz_to_mb_raw(&mrz);
-      mbr.header = record.header;
-      mbr.ds_header = record.ds_header;
-      d->mbraw_pub_.publish(mbr);
-      d->m_status.ping_num = mrz.cmnPart.pingCnt;
-      ROS_ERROR_STREAM("Ping num: "<<d->m_status.ping_num);
-      mbraw_to_kmstatus(mbr);
+    bool full_data = false;
+    ds_core_msgs::RawData logme{};
+    std::tie(full_data, logme) = check_and_append_mpartition(raw);
+    if (full_data){
+      _write_kmall_data(logme);
+      EMdgmMRZ mrz;
+      bool ok = false;
+      std::tie(ok, mrz) = read_mrz(logme.data.data(),logme.data.size());
+      if (ok){
+        auto mbr = mrz_to_mb_raw(&mrz);
+        mbr.header = record.header;
+        mbr.ds_header = record.ds_header;
+        d->mbraw_pub_.publish(mbr);
+        d->m_status.ping_num = mrz.cmnPart.pingCnt;
+        ROS_ERROR_STREAM("Ping num: "<<d->m_status.ping_num);
+        mbraw_to_kmstatus(mbr);
+      }
+//      d->kmall_record_pub_.publish(record);
+//      return true;
     }
   }
   else if (msg_type==EM_DGM_M_WATER_COLUMN){
-    ROS_ERROR_STREAM("EM_DGM_M_WATER_COLUMN not implemented yet!");
     record.record_name = "EM_DGM_M_WATER_COLUMN";
+    bool full_data = false;
+    ds_core_msgs::RawData logme{};
+    std::tie(full_data, logme) = check_and_append_mpartition(raw);
+    if (full_data) {
+      _write_kmall_data(logme);
+    }
   }
   else if (msg_type==EM_DGM_C_POSITION){
     record.record_name = "EM_DGM_C_POSITION";
+    _write_kmall_data(raw);
   }
   else if (msg_type==EM_DGM_C_HEAVE){
     record.record_name = "EM_DGM_C_HEAVE";
+    _write_kmall_data(raw);
   }
-
   if (record.record_name.empty()){
     ROS_ERROR_STREAM("TYPE : " << msg_type << " not parsed, but recorded anyways");
     record.record_name = "Unknown";
+    _write_kmall_data(raw);
   }
   d->kmall_record_pub_.publish(record);
   return true;
 }
+
+std::pair<bool, ds_core_msgs::RawData>
+KongsbergEM2040::check_and_append_mpartition(ds_core_msgs::RawData raw_p)
+{
+  // Returns a bool and a RawData msg.
+  // If the datagram is not partitioned, then it returns the datagram.
+  // If the datagram is partitioned, then
+  // True means that the datagram is complete (SHOULD BE LOGGED AND PARSED)
+  // False means that the datagram is incomplete (NO LOGGING)
+  DS_D(KongsbergEM2040);
+  auto ptr = raw_p.data.data();
+  auto max_length = raw_p.data.size();
+  int count = 0;
+  auto hdr = reinterpret_cast<EMdgmHeader*>(ptr + count);
+  count += sizeof(EMdgmHeader);
+  auto partition = reinterpret_cast<EMdgmMpartition*>(ptr + count);
+  count += sizeof(EMdgmMpartition);
+  // If the datagram isn't partitioned, then return itself immediately!
+  if (partition->dgmNum == 1 && partition->numOfDgms == 1){
+    return {true, raw_p};
+  }
+  // If it's the first in a sequence, then clear out the buffer and resize it to the current size.
+  // Set its partition values to 1 and 1 respectively.
+  else if (partition->dgmNum == 1 && partition->numOfDgms > 1){
+    partition->dgmNum = 1;
+    partition->numOfDgms = 1;
+    d->kmall_partitioned.data.resize(max_length);
+    d->kmall_partitioned.data = raw_p.data;
+    return {false, {}};
+  }
+  // If it's a following datagram, then append it starting AFTER the partition.
+  else if (partition->dgmNum > 1){
+    auto current_length = d->kmall_partitioned.data.size();
+    if (current_length == 0){
+      ROS_ERROR_STREAM("MISSED EARLIER PARTITION PACKET... IGNORING LATER PACKETS");
+    }
+    // Resize and copy everything except the new header/partition
+    // Overwrite the ending values for the length
+    d->kmall_partitioned.data.resize(current_length + max_length - count - 2);
+    memcpy(ptr + count, d->kmall_partitioned.data.data() + current_length - 2, max_length - count);
+    ROS_ERROR_STREAM("Found partition piece "<<partition->dgmNum<< " of "<<partition->numOfDgms << " with size "<<max_length);
+  }
+  // If the datagram has completed transmission, then return the partitioned data message.
+  if (partition->dgmNum == partition->numOfDgms){
+    auto data_ptr = d->kmall_partitioned.data.data();
+    auto data_size = d->kmall_partitioned.data.size();
+    auto starting_size_ptr = reinterpret_cast<uint32_t*>(data_ptr);
+    *starting_size_ptr = data_size;
+    auto ending_size_ptr = reinterpret_cast<uint16_t*>(d->kmall_partitioned.data.data() + d->kmall_partitioned.data.size() - 4);
+    *ending_size_ptr = data_size;
+    ROS_ERROR_STREAM("Partition complete! Total size "<< data_size<<" bytes");
+    return {true, d->kmall_partitioned};
+  }
+  // Otherwise, assume transmission has not completed and we are waiting for more data.
+  return {false, {}};
+};
 
 std::pair<bool, EMdgmMRZ>
 KongsbergEM2040::read_mrz(uint8_t* ptr, int max_length)
@@ -519,7 +598,7 @@ KongsbergEM2040::mbraw_to_kmstatus(ds_multibeam_msgs::MultibeamRaw raw)
   DS_D(KongsbergEM2040);
   // ping num populated earlier
   d->m_status.num_soundings = num_soundings;
-  d->m_status.percent_good = num_good / static_cast<float>(num_soundings);
+  d->m_status.percent_good = 100.0 * num_good / static_cast<float>(num_soundings);
   d->m_status.min_depth = min_depth;
   d->m_status.max_depth = max_depth;
   d->m_status.center_depth = center_depth;
@@ -607,6 +686,8 @@ KongsbergEM2040::setupParameters()
   // other parameters
   d->kmall_max_buffer_size = 1e3*ros::param::param<int>("~max_kmall_buffer_kB", 30);
   d->kmall_max_file_size = 1e6*ros::param::param<int>("~max_kmall_file_MB", 400);
+  d->kmall_partitioned = ds_core_msgs::RawData{};
+  d->kmall_partitioned.data.resize(0);
   _new_kmall_file();
 }
 
@@ -691,12 +772,12 @@ KongsbergEM2040::_ping_cmd(ds_kongsberg_msgs::PingCmd::Request &req, ds_kongsber
 //      _new_kmall_file();
       _send_kctrl_command(SIS_TO_K::LOG_IOP_SVP);
       _send_kctrl_command(SIS_TO_K::START_PING);
-      d->m_status.pinging = true;
+      d->m_status.commanded_pinging = true;
       res.action = "Commanded ping start, created new kmall file, logged IOP and SVP information";
       break;
     case ds_kongsberg_msgs::PingCmd::Request::PING_STOP :
       _send_kctrl_command(SIS_TO_K::STOP_PING);
-      d->m_status.pinging = false;
+      d->m_status.commanded_pinging = false;
       res.action = "Commanded ping stop";
       break;
     case ds_kongsberg_msgs::PingCmd::Request::PING_NEWFILE :
@@ -846,9 +927,9 @@ void
 KongsbergEM2040::_on_kmall_data(ds_core_msgs::RawData raw)
 {
   DS_D(KongsbergEM2040);
-  _write_kmall_data(raw);
+
   if (!parse_data(raw)){
-    ROS_ERROR_STREAM("KMAll data parse failed");
+    ROS_ERROR_STREAM("KMAll data parse failed OR incomplete packet");
   } else {
     std::unique_lock<std::mutex> lck(d->m_status_mutex);
     d->kmall_timer.stop();
@@ -879,6 +960,10 @@ KongsbergEM2040::_startup_sequence()
   DS_D(KongsbergEM2040);
   _send_kctrl_command(SIS_TO_K::START);
   _send_kctrl_command(SIS_TO_K::SET_READY);
+  if (d->m_status.commanded_pinging){
+    _send_kctrl_command(SIS_TO_K::LOG_IOP_SVP);
+    _send_kctrl_command(SIS_TO_K::START_PING);
+  }
 }
 std::string
 KongsbergEM2040::_send_kctrl_command(int cmd)
@@ -1022,7 +1107,7 @@ KongsbergEM2040::_write_kctrl_xml(ds_core_msgs::RawData& raw)
   DS_D(KongsbergEM2040);
   auto xml_string = std::string{ reinterpret_cast<const char*>(raw.data.data()), raw.data.size() };
   d->m_status.xml_filecount++;
-  d->m_status.xml_filename = filename(d->m_xml_directory,
+  d->m_status.xml_filename = filename(d->m_status.xml_directory,
                                       d->m_status.xml_filecount,
                                       d->m_status.sounder_name,
                                       ".xml");
@@ -1163,8 +1248,10 @@ KongsbergEM2040::_on_pinging_timeout(const ros::TimerEvent&)
 {
   DS_D(KongsbergEM2040);
   std::unique_lock<std::mutex> lck(d->m_status_mutex);
-  if(d->m_status.pinging){
-    ROS_ERROR_STREAM("Ping timed out... assume not pinging");
+  if(d->m_status.commanded_pinging && d->m_status.kmall_connected){
+    ROS_ERROR_STREAM("Ping timed out... attempt to restart pinging");
+    _send_kctrl_command(SIS_TO_K::LOG_IOP_SVP);
+    _send_kctrl_command(SIS_TO_K::START_PING);
   }
   d->m_status.pinging = false;
   d->kmstatus_pub_.publish(d->m_status);
