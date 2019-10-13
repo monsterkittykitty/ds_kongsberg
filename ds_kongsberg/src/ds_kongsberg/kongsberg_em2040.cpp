@@ -292,7 +292,7 @@ KongsbergEM2040::parse_data(ds_core_msgs::RawData& raw)
 
   uint8_t* bytes_ptr = raw.data.data();
   auto hdr = reinterpret_cast<EMdgmHeader*>(bytes_ptr);
-  ROS_ERROR_STREAM("TIME: "<<hdr->time_sec);
+  //ROS_ERROR_STREAM("TIME: "<<hdr->time_sec);
   std::string msg_type(hdr->dgmType, hdr->dgmType + sizeof(hdr->dgmType)/sizeof(hdr->dgmType[0]));
 
   ds_kongsberg_msgs::KongsbergKMAllRecord record;
@@ -418,7 +418,7 @@ KongsbergEM2040::check_and_append_mpartition(ds_core_msgs::RawData raw_p)
   int count = 0;
   auto hdr = reinterpret_cast<EMdgmHeader*>(ptr + count);
   count += sizeof(EMdgmHeader);
-  ROS_ERROR_STREAM("PARTITIONED TIME: "<<hdr->time_sec);
+  // ROS_ERROR_STREAM("PARTITIONED TIME: "<<hdr->time_sec);
   auto partition = reinterpret_cast<EMdgmMpartition*>(ptr + count);
   count += sizeof(EMdgmMpartition);
   // If the datagram isn't partitioned, then return itself immediately!

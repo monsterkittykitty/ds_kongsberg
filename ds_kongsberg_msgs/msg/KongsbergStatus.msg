@@ -12,6 +12,7 @@ bool pu_powered         # PU --> KCtrl
 bool pu_connected       # PU <-- KCtrl
 bool kmall_connected    # PU --> node
 bool pinging
+bool commanded_pinging
 
 # BIST
 bool bist_running
