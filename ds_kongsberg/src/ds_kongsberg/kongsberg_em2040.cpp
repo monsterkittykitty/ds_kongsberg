@@ -240,7 +240,6 @@ KongsbergEM2040::read_bist_result(ds_core_msgs::RawData& raw)
 
   if (d->m_status.bist_running){
     _print_bist(name, status, message);
-    ros::Duration(1.0).sleep();
     _run_next_bist();
   }
   return true;
