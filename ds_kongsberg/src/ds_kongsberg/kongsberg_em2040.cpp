@@ -367,7 +367,7 @@ KongsbergEM2040::parse_data(ds_core_msgs::RawData& raw)
         mbr.ds_header = record.ds_header;
         d->mbraw_pub_.publish(mbr);
         d->m_status.ping_num = mrz.cmnPart.pingCnt;
-        ROS_ERROR_STREAM("Ping num: "<<d->m_status.ping_num);
+        //ROS_ERROR_STREAM("Ping num: "<<d->m_status.ping_num);
         mbraw_to_kmstatus(mbr);
       }
 //      d->kmall_record_pub_.publish(record);
@@ -1126,7 +1126,7 @@ KongsbergEM2040::_write_kctrl_xml(ds_core_msgs::RawData& raw)
   fs.open (d->m_status.xml_filename, std::ios::binary);
   fs << xml_string;
   fs.close();
-  ROS_ERROR_STREAM("Logged XML in "<<d->m_status.xml_filename);
+  ROS_INFO_STREAM("Logged XML in "<<d->m_status.xml_filename);
   // Now look for some important key-value pairs
   std::vector<std::string> params, vals;
   std::tie(params, vals) = string_split_out_xml_params(xml_string);
