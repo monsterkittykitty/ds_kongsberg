@@ -431,14 +431,14 @@ KongsbergEM2040::check_and_append_mpartition(ds_core_msgs::RawData raw_p)
     partition->numOfDgms = 1;
     d->kmall_partitioned.data.resize(max_length);
     d->kmall_partitioned.data = raw_p.data;
-    ROS_ERROR_STREAM("Found partition piece "<<partition->dgmNum<< " of "<<partition->numOfDgms << " with size "<<max_length);
+    ROS_INFO_STREAM("Found partition piece "<<partition->dgmNum<< " of "<<partition->numOfDgms << " with size "<<max_length);
     return {false, {}};
   }
   // If it's a following datagram, then append it starting AFTER the partition.
   else if (partition->dgmNum > 1){
     auto current_length = d->kmall_partitioned.data.size();
     if (current_length == 0){
-      ROS_ERROR_STREAM("MISSED EARLIER PARTITION PACKET... IGNORING LATER PACKETS");
+      ROS_INFO_STREAM("MISSED EARLIER PARTITION PACKET... IGNORING LATER PACKETS");
     }
     // Resize and copy everything except the new header/partition
     // Overwrite the ending values for the length
