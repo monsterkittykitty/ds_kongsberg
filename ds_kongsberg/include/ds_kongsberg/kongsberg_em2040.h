@@ -47,15 +47,24 @@
 #include "ds_kongsberg_msgs/BistCmd.h"
 #include "ds_kongsberg_msgs/LoadXmlCmd.h"
 #include "ds_kongsberg_msgs/KongsbergStatus.h"
+#include "ds_kongsberg_msgs/KongsbergXYZA.h"
+//#include "sonar_monitor_msgs/KongsbergXYZA.h"
+//#include <geometry_msgs/GeoPointStamped.h>
+#include <geometry_msgs/Point.h>
+//#include "project11_transformations/local_services.h"
+#include "geographic_msgs/GeoPoint.h"
 
 #include <ds_multibeam_msgs/MultibeamFilterStats.h>
 #include <ds_multibeam_msgs/MultibeamGrid.h>
 #include <ds_multibeam_msgs/MultibeamGridStats.h>
 #include <ds_multibeam_msgs/MultibeamRaw.h>
 
+
 namespace ds_kongsberg{
 struct KongsbergEM2040Private;
 
+// The single colon here indicates that class KongsbergEM2040 inherits from ds_base::DsProcess;
+// thus, KongsbergEM2040 can use methods and properties of ds_base::DsProcess.
 class KongsbergEM2040 : public ds_base::DsProcess {
   DS_DECLARE_PRIVATE(KongsbergEM2040)
   DS_DISABLE_COPY(KongsbergEM2040)
@@ -76,6 +85,12 @@ class KongsbergEM2040 : public ds_base::DsProcess {
   uint8_t read_good_bad_missing(std::string);
 //  static EMdgmMWC read_mwc(uint8_t* bytes);
 //
+  // TODO LMD:
+  //static sonar_monitor_msgs::KongsbergXYZA mrz_to_xyza(EMdgmMRZ* msg);
+  //static ds_kongsberg_msgs::KongsbergXYZA mrz_to_xyza(EMdgmMRZ* msg);
+  geometry_msgs::Point latLongToMap(double lat, double lon, double depth);
+  sensor_msgs::PointCloud2 mrz_to_pointcloud2(EMdgmMRZ* msg);
+
   static ds_multibeam_msgs::MultibeamRaw mrz_to_mb_raw(EMdgmMRZ* msg);
 //  static sensor_msgs::Image mwc_to_image(EMdgmMWC* msg);
 //  static sensor_msgs::PointCloud2 mb_raw_to_pointcloud(ds_multibeam_msgs::MultibeamRaw* msg);
@@ -118,6 +133,7 @@ class KongsbergEM2040 : public ds_base::DsProcess {
   void _on_pinging_timeout(const ros::TimerEvent&);
 
   std::unique_ptr<KongsbergEM2040Private> d_ptr_;
+
 };
 
 }

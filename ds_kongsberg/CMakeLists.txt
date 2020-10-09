@@ -15,6 +15,10 @@ find_package(catkin REQUIRED COMPONENTS
         ds_kongsberg_msgs
         ds_multibeam_msgs
         ds_util
+        geometry_msgs
+        project11
+        project11_transformations
+        std_msgs
         )
 
 find_package(ClangFormat)
@@ -35,7 +39,7 @@ endif(CLANG_FORMAT_FOUND)
 catkin_package(
         INCLUDE_DIRS include
         LIBRARIES ds_kongsberg
-        CATKIN_DEPENDS ds_base ds_core_msgs ds_kongsberg_msgs ds_multibeam_msgs ds_util
+        CATKIN_DEPENDS ds_base ds_core_msgs ds_kongsberg_msgs ds_multibeam_msgs ds_util geometry_msgs std_msgs
 )
 
 ## System dependencies are found with CMake's conventions
@@ -147,7 +151,7 @@ add_library(${PROJECT_NAME}
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
 ## either from message generation or dynamic reconfigure
- add_dependencies(${PROJECT_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(${PROJECT_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 target_link_libraries(${PROJECT_NAME}
         ${catkin_LIBRARIES}
@@ -237,7 +241,7 @@ install(DIRECTORY include/${PROJECT_NAME}/
 ## Testing ##
 #############
 if(CATKIN_ENABLE_TESTING)
-
+    find_package(rostest REQUIRED)
     add_rostest_gtest(test_em2040_parse
         launch/em2040_parse_test.test
         src/test/test_kongsberg_em2040_parsing.cpp)

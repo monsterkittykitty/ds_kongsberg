@@ -38,8 +38,17 @@
 #include "kongsberg_em2040_strings.h"
 #include "ds_core_msgs/ClockOffset.h"
 #include <regex>
+#include <geographic_msgs/GeoPointStamped.h>
+#include <geometry_msgs/Point.h>
+#include <geometry_msgs/PointStamped.h>
 #include "ds_util/int_to_hex.h"
 #include "ds_kongsberg_msgs/KongsbergKMAllRecord.h"
+#include "ds_kongsberg_msgs/KongsbergXYZA.h"
+//#include "sonar_monitor_msgs/KongsbergXYZA.h"
+#include "project11_transformations/LatLongToMap.h"
+#include "project11/gz4d_geo.h"
+#include "project11_transformations/local_services.h"
+//#include "../../../../../project11_transformations/include/project11_transformations/local_services.h"
 
 namespace ds_kongsberg{
 
@@ -48,7 +57,13 @@ KongsbergEM2040::KongsbergEM2040()
     , d_ptr_(std::unique_ptr<KongsbergEM2040Private>(new KongsbergEM2040Private))
 {
 }
-
+// Constructor:
+// DsProcess is a constructor defined in ds_base/ds_process.cpp;
+// kongsberg_em2040_node.cpp calls this class's run method.
+// KongsbergEM2040Private is a struct containing many ROS-related things (and other stuff),
+// defined in ds_kongsberg/kongsberg_em2040_private.h.
+// The part after the colon (:) is an 'initialization list'--it is a way to initialize some fields of the object;
+// after executing the initialization list, the constructor body is executed.
 KongsbergEM2040::KongsbergEM2040(int argc, char* argv[], const std::string& name)
     : DsProcess(argc, argv, name)
     , d_ptr_(std::unique_ptr<KongsbergEM2040Private>(new KongsbergEM2040Private))
@@ -292,6 +307,8 @@ KongsbergEM2040::parse_data(ds_core_msgs::RawData& raw)
   uint8_t* bytes_ptr = raw.data.data();
   auto hdr = reinterpret_cast<EMdgmHeader*>(bytes_ptr);
   //ROS_ERROR_STREAM("TIME: "<<hdr->time_sec);
+  // LMD: It looks like hdr->dgmType is used as a position here;
+  // the values at (hdr->dgmType through hdr->dgmType + size(hdr->dgmType)) assigned to msg_type
   std::string msg_type(hdr->dgmType, hdr->dgmType + sizeof(hdr->dgmType)/sizeof(hdr->dgmType[0]));
 
   ds_kongsberg_msgs::KongsbergKMAllRecord record;
@@ -306,31 +323,41 @@ KongsbergEM2040::parse_data(ds_core_msgs::RawData& raw)
     return false;
   }
 
+  // LMD: Looks like this expects IIP datagram first. When it is received, a new file is created.
+    // #IIP
   if (msg_type==EM_DGM_I_INSTALLATION_PARAM) {
     record.record_name = "EM_DGM_I_INSTALLATION_PARAM";
     _new_kmall_file();
+    // TODO: LMD
+    ROS_ERROR_STREAM("New file created upon receipt of IIP");
     _write_kmall_data(raw);
   }
+      // #IOP
   else if (msg_type==EM_DGM_I_OP_RUNTIME) {
     record.record_name = "EM_DGM_I_OP_RUNTIME";
     _write_kmall_data(raw);
   }
+      // #SPO
   else if (msg_type==EM_DGM_S_POSITION){
     record.record_name = "EM_DGM_S_POSITION";
     _write_kmall_data(raw);
   }
+      // #SKM
   else if (msg_type==EM_DGM_S_KM_BINARY){
     record.record_name = "EM_DGM_S_KM_BINARY";
     _write_kmall_data(raw);
   }
+      // #SVP
   else if (msg_type==EM_DGM_S_SOUND_VELOCITY_PROFILE){
     record.record_name = "EM_DGM_S_SOUND_VELOCITY_PROFILE";
     _write_kmall_data(raw);
   }
+      // #SVT
   else if (msg_type==EM_DGM_S_SOUND_VELOCITY_TRANSDUCER){
     record.record_name = "EM_DGM_S_SOUND_VELOCITY_TRANSDUCER";
     _write_kmall_data(raw);
   }
+      // #SCL
   else if (msg_type==EM_DGM_S_CLOCK){
     record.record_name = "EM_DGM_S_CLOCK";
     ds_core_msgs::ClockOffset offset;
@@ -340,15 +367,19 @@ KongsbergEM2040::parse_data(ds_core_msgs::RawData& raw)
     d->offset_pub_.publish(offset);
     _write_kmall_data(raw);
   }
+      // #SDE
   else if (msg_type==EM_DGM_S_DEPTH){
     record.record_name = "EM_DGM_S_DEPTH";
     _write_kmall_data(raw);
   }
+      // # SHI
   else if (msg_type==EM_DGM_S_HEIGHT){
     record.record_name = "EM_DGM_S_HEIGHT";
     _write_kmall_data(raw);
   }
+      // #MRZ
   else if (msg_type==EM_DGM_M_RANGE_AND_DEPTH){
+    ROS_ERROR_STREAM("mrz");
     d->pinging_timer.stop();
     d->pinging_timer.start();
     d->m_status.pinging = true;
@@ -362,6 +393,7 @@ KongsbergEM2040::parse_data(ds_core_msgs::RawData& raw)
       bool ok = false;
       std::tie(ok, mrz) = read_mrz(logme.data.data(),logme.data.size());
       if (ok){
+        // Function receives pointer to MRZ datagram and returns MultibeamRaw msg.
         auto mbr = mrz_to_mb_raw(&mrz);
         mbr.header = record.header;
         mbr.ds_header = record.ds_header;
@@ -369,6 +401,14 @@ KongsbergEM2040::parse_data(ds_core_msgs::RawData& raw)
         d->m_status.ping_num = mrz.cmnPart.pingCnt;
         //ROS_ERROR_STREAM("Ping num: "<<d->m_status.ping_num);
         mbraw_to_kmstatus(mbr);
+
+        // TODO: LMD added: publish xyza data from mrz as ros message
+//        auto xyza = mrz_to_xyza(&mrz);
+//        d->sounding_xyza_pub_.publish(xyza);
+
+        auto pointcloud2 = mrz_to_pointcloud2(&mrz);
+        d->pointcloud2_xyza_pub_.publish(pointcloud2);
+
       }
 //      d->kmall_record_pub_.publish(record);
 //      return true;
@@ -377,6 +417,7 @@ KongsbergEM2040::parse_data(ds_core_msgs::RawData& raw)
       ROS_ERROR_STREAM("PING PARTITION");
     }
   }
+      // #MWC
   else if (msg_type==EM_DGM_M_WATER_COLUMN){
     record.record_name = "EM_DGM_M_WATER_COLUMN";
     bool full_data = false;
@@ -386,10 +427,12 @@ KongsbergEM2040::parse_data(ds_core_msgs::RawData& raw)
       _write_kmall_data(logme);
     }
   }
+      // #CPO
   else if (msg_type==EM_DGM_C_POSITION){
     record.record_name = "EM_DGM_C_POSITION";
     _write_kmall_data(raw);
   }
+      // #CHE
   else if (msg_type==EM_DGM_C_HEAVE){
     record.record_name = "EM_DGM_C_HEAVE";
     _write_kmall_data(raw);
@@ -399,6 +442,7 @@ KongsbergEM2040::parse_data(ds_core_msgs::RawData& raw)
     record.record_name = "Unknown";
     _write_kmall_data(raw);
   }
+  // Record published to ROS
   d->kmall_record_pub_.publish(record);
   return true;
 }
@@ -541,6 +585,161 @@ KongsbergEM2040::read_mrz(uint8_t* ptr, int max_length)
   return {true, mrz};
 }
 
+
+// TODO: LMD
+geometry_msgs::Point KongsbergEM2040::latLongToMap(double lat, double lon, double depth) {
+    //ds_base::DsProcess::setupPublishers();
+    DS_D(KongsbergEM2040);
+    auto nh = nodeHandle();
+    const auto name = ros::this_node::getName();
+    ROS_ERROR_STREAM("name: " + name);
+    //ROS_ERROR_STREAM("lat, lon, depth");
+    ROS_ERROR_STREAM(lat);
+    ROS_ERROR_STREAM(lon);
+    ROS_ERROR_STREAM(depth);
+    //ROS_ERROR_STREAM("in latlongtomap");
+
+    geographic_msgs::GeoPoint gp;
+    gp.latitude = lat;
+    gp.longitude = lon;
+    gp.altitude = depth;
+
+    geometry_msgs::Point map = d->transformation_.wgs84_to_map(gp);
+
+    return map;
+}
+
+
+// TODO: LMD
+sensor_msgs::PointCloud2 KongsbergEM2040::mrz_to_pointcloud2(EMdgmMRZ* msg) {
+    int num_soundings = msg->rxInfo.numSoundingsMaxMain + msg->rxInfo.numExtraDetections;
+    sensor_msgs::PointCloud2 pc;
+    // ROS PointCloud2 message:
+    //      Header:
+    //          uint32 seq (sequence ID: consecutively increasing ID)
+    //          time stamp (stamp.sec: seconds since epoch; stamp.nsec: nanoseconds since stamp.sec)
+    //          string frame_id (frame this data is associated with)
+    ros::Time t;
+    pc.header.stamp = t.fromSec(msg->header.time_sec + msg->header.time_nanosec / 1.0e9);
+    // TODO: LMD; not sure this is correct?
+    pc.header.frame_id = "map";
+
+    pc.height = 1;
+    pc.width = 4 * num_soundings;
+
+    pc.fields.resize(4);
+    for (int i = 0; i < 4; i++) {
+        sensor_msgs::PointField tempPF;
+        if (i == 0) {
+            tempPF.name = "x";
+            tempPF.offset = 0; //Bytes?
+            tempPF.datatype = 8; //FLOAT64
+            tempPF.count = 1;
+        }
+        else if (i == 1) {
+            tempPF.name = "y";
+            tempPF.offset = 8; //Bytes?
+            tempPF.datatype = 8; //FLOAT64
+            tempPF.count = 1;
+        }
+        else if (i == 2) {
+            tempPF.name = "z";
+            tempPF.offset = 16; //Bytes?
+            tempPF.datatype = 8; //FLOAT64
+            tempPF.count = 1;
+        }
+        else if (i == 3) {
+            tempPF.name = "a";
+            tempPF.offset = 32; //Bytes?
+            tempPF.datatype = 7; //FLOAT32
+            tempPF.count = 1;
+        }
+        pc.fields[i] = tempPF;
+    }
+
+    pc.is_bigendian = false;
+    pc.point_step = 36; //Bytes?
+    pc.row_step = pc.width;
+
+    pc.data.resize(4 * num_soundings);
+    for (int i = 0; i < num_soundings; i++) {
+
+        double tempLat = msg->pingInfo.latitude_deg + msg->sounding[i].deltaLatitude_deg;
+        double tempLon = msg->pingInfo.longitude_deg + msg->sounding[i].deltaLongitude_deg;
+        //TODO: LMD; Probably incorrect; need height wrt ellipsoid?
+        double tempDepth = msg->sounding[i].z_reRefPoint_m - msg->pingInfo.z_waterLevelReRefPoint_m;
+
+        /*ROS_ERROR_STREAM("tempLat, tempLon, tempDepth");
+        ROS_ERROR_STREAM(tempLat);
+        ROS_ERROR_STREAM(tempLon);
+        ROS_ERROR_STREAM(tempDepth);*/
+
+        geometry_msgs::Point tempPoint = latLongToMap(tempLat, tempLon, tempDepth);
+        //geometry_msgs::PointStamped tempPointStamped = latLongToMap(tempLat, tempLon, tempDepth);
+        //ROS_ERROR_STREAM("pointstamped received");
+        // x
+        // Pre-map transformation:
+        //pc.data[i] = msg->pingInfo.latitude_deg + msg->sounding[i].deltaLatitude_deg;
+        pc.data[i] = tempPoint.x;
+        // y
+        // Pre-map transformation:
+        //pc.data[i + 1] = msg->pingInfo.longitude_deg + msg->sounding[i].deltaLongitude_deg;
+        pc.data[i + 1] = tempPoint.y;
+        // z
+        // Pre-map transformation:
+        //pc.data[i + 2] = msg->sounding[i].z_reRefPoint_m - msg->pingInfo.z_waterLevelReRefPoint_m;
+        pc.data[i + 2] = tempPoint.z;
+        // a
+        pc.data[i + 3] = msg->sounding[i].reflectivity1_dB;
+    }
+    // TODO: Checks here?
+    pc.is_dense = true;
+
+    return pc;
+}
+
+
+
+// TODO: LMD
+/*sonar_monitor_msgs::KongsbergXYZA KongsbergEM2040::mrz_to_xyza(EMdgmMRZ* msg) {
+    sonar_monitor_msgs::KongsbergXYZA xyza{};
+    ros::Time t;
+    xyza.header.stamp = t.fromSec(msg->header.time_sec + msg->header.time_nanosec / 1.0e9);
+
+    int num_soundings = msg->rxInfo.numSoundingsMaxMain + msg->rxInfo.numExtraDetections;
+    // Resize arrays in KongsbergXYZ message to accomodate num_soundings in datagram.
+    xyza.sounding_x_latitude_deg.resize(num_soundings);
+    xyza.sounding_y_longitude_deg.resize(num_soundings);
+    xyza.sounding_z_re_waterline_meters.resize(num_soundings);
+    xyza.sounding_bs_mean.resize(num_soundings);
+
+    for (int i = 0; i < num_soundings; i++) {
+        // ***pingInfo.latitude_deg: "Latitude (decimal degrees) of vessel reference point at time of midpoint of first tx pulse.
+        // Negative on southern hemisphere. Parameter is set to define UNAVAILABLE_LATITUDE if not available."
+        // ***sounding.deltaLatitude_deg: "Distance from vessel reference point at time of first tx pulse in ping,
+        // to depth point. Measured in the surface coordinate system (SCS). Unit decimal degrees."
+        xyza.sounding_x_latitude_deg[i] = msg->pingInfo.latitude_deg + msg->sounding[i].deltaLatitude_deg;
+        // ***pingInfo.longitude_deg: "Longitude (decimal degrees) of vessel reference point at time of midpoint of first tx pulse.
+        // Negative on western hemisphere. Parameter is set to define UNAVAILABLE_LONGITUDE if not available."
+        // ***sounding.deltaLongitude_deg: "Distance from vessel reference point at time of first tx pulse in ping,
+        // to depth point. Measured in the surface coordinate system (SCS). Unit decimal degrees."
+        xyza.sounding_y_longitude_deg[i] = msg->pingInfo.longitude_deg + msg->sounding[i].deltaLongitude_deg;
+        // ***pingInfo.z_waterLevelReRefPoint_m: "Distance between water line and vessel reference point in meters.
+        // At time of midpoint of first tx pulse. Measured in the surface coordinate system (SCS).
+        // Used this to move depth point (XYZ) from vessel reference point to waterline."
+        // ***sounding.z_RefPoint_m: "Vertical distance z. Distance from vessel reference point at time of first
+        // tx pulse in ping, to depth point. Measured in the surface coordinate system (SCS)"
+        xyza.sounding_z_re_waterline_meters[i] = msg->sounding[i].z_reRefPoint_m - msg->pingInfo.z_waterLevelReRefPoint_m;
+        // TODO: Currently using sounding.reflectivity2_dB: "Beam intensity (BS), using TVG = X log(R) + 2 alpha R.
+        //  X (operator selected) is common to all beams in datagram. Alpha (variabel meanAbsCoeff_dBPerkm) is given
+        //  for each beam (current struct). BS = EL - SL - M + TVG + BScorr, where EL= detected echo level
+        //  (not recorded in datagram), and the rest of the parameters are found below."
+        //  NOT SURE IF THIS IS CORRECT BS VALUE???
+        xyza.sounding_bs_mean[i] = msg->sounding[i].reflectivity2_dB;
+    }
+    return xyza;
+}*/
+
 ds_multibeam_msgs::MultibeamRaw
 KongsbergEM2040::mrz_to_mb_raw(EMdgmMRZ* msg)
 {
@@ -630,6 +829,11 @@ KongsbergEM2040::setupConnections()
   DS_D(KongsbergEM2040);
   d->kmall_conn_ = addConnection("kmall_connection", boost::bind(&KongsbergEM2040::_on_kmall_data, this, _1));
   d->kctrl_conn_ = addConnection("kctrl_connection", boost::bind(&KongsbergEM2040::_on_kctrl_data, this, _1));
+
+  // TODO: LMD
+  ros::NodeHandle nh = nodeHandle();
+  d->transformation_ = project11::Transformations(nh);
+  ROS_ERROR_STREAM("after project11::Transformation(nh)");
 }
 void
 KongsbergEM2040::setupServices()
@@ -666,9 +870,13 @@ KongsbergEM2040::setupParameters()
   d->m_status.sounder_name = ros::param::param<std::string>("~sounder_name", "EM2040_40");
   d->m_status.ship_name = ros::param::param<std::string>("~ship_name", "ShipName");
   d->m_status.pu_connected = !ros::param::param<bool>("~run_startup", true);
-  d->m_status.bist_directory = ros::param::param<std::string>("~bist_dir", "/home/jvaccaro/");
-  d->m_status.kmall_directory = ros::param::param<std::string>("~kmall_dir", "/home/jvaccaro/");
-  d->m_status.xml_directory = ros::param::param<std::string>("~xml_dir", "/home/jvaccaro/");
+  // TODO: Temporary changes; make these configurable.
+  //d->m_status.bist_directory = ros::param::param<std::string>("~bist_dir", "/home/jvaccaro/");
+  d->m_status.bist_directory = ros::param::param<std::string>("~bist_dir", "~/Desktop/SharedFolder_ASV_III/");
+  //d->m_status.kmall_directory = ros::param::param<std::string>("~kmall_dir", "/home/jvaccaro/");
+  d->m_status.kmall_directory = ros::param::param<std::string>("~kmall_dir", "~/Desktop/SharedFolder_ASV_III/");
+  //d->m_status.xml_directory = ros::param::param<std::string>("~xml_dir", "/home/jvaccaro/");
+    d->m_status.xml_directory = ros::param::param<std::string>("~xml_dir", "~/Desktop/SharedFolder_ASV_III/");
   d->m_status.cpu_temperature = "";
   d->m_status.position_1 =  "";
   d->m_status.position_2 =  "";
@@ -727,6 +935,14 @@ KongsbergEM2040::setupPublishers()
 
   auto kmstatus_topic = ros::param::param<std::string>("~kmstatus_topic", "kmstatus");
   d->kmstatus_pub_ = nh.advertise<ds_kongsberg_msgs::KongsbergStatus>(name + "/" + kmstatus_topic, 1000);
+
+  // TODO: LMD
+  auto sounding_xyza_topic = ros::param::param<std::string>("~sounding_xyza_topic", "sounding_xyza");
+  //d->sounding_xyza_pub_ = nh.advertise<sonar_monitor_msgs::KongsbergXYZA>(name + "/" + sounding_xyza_topic, 1000);
+  d->sounding_xyza_pub_ = nh.advertise<ds_kongsberg_msgs::KongsbergXYZA>(name + "/" + sounding_xyza_topic, 1000);
+
+  auto pointcloud2_xyza_topic = ros::param::param<std::string>("~pointcloud2_xyza_topic", "pointcloud_xyza");
+  d->pointcloud2_xyza_pub_ = nh.advertise<sensor_msgs::PointCloud2>(name + "/" + pointcloud2_xyza_topic, 1000);
 }
 
 void
@@ -1084,12 +1300,20 @@ KongsbergEM2040::_new_kmall_file()
   if (d->kmall_stream == NULL){
     d->kmall_stream = new std::ofstream();
   } else {
+      //TODO: delete this (LMD)
+      ROS_ERROR_STREAM("BUTT");
     d->kmall_stream->close();
   }
   d->kmall_stream->open (d->m_status.kmall_filename, std::ios::out | std::ios::binary);
   d->kmall_buffer_size = 0;
   d->kmall_file_size = 0;
   d->m_status.kmall_filesize_kB = 0;
+
+//  char* buffer = "TEST";
+//  d->kmall_stream->write(buffer, 4);
+//  std::cout << "hello" << std::endl;
+  ROS_ERROR_STREAM("open?: " << d->kmall_stream->is_open());
+
   ROS_ERROR_STREAM("New kmall file: " << d->m_status.kmall_filename);
 }
 void
@@ -1203,6 +1427,13 @@ void
 KongsbergEM2040::_on_kctrl_timeout(const ros::TimerEvent&)
 {
   DS_D(KongsbergEM2040);
+
+    // LMD added:
+    if (d->kmall_buffer_size > 0) {
+        d->kmall_stream->flush();
+        d->kmall_buffer_size = 0;
+    }
+
   std::unique_lock<std::mutex> lck(d->m_status_mutex);
   if (d->m_status.kctrl_connected){
     ROS_ERROR_STREAM("Kctrl timed out... assume totally disconnected");

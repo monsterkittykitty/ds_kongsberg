@@ -1,10 +1,13 @@
 kongsberg:
   kmall_connection:
     type: "UDP"
-#    udp_address: "192.168.100.130"
-    udp_address: "239.255.0.1"
+    #udp_address: "192.168.100.130"
+    #udp_address: "239.255.0.1"
+    #udp_address: "192.168.220.128"
+    udp_address: "127.0.0.1"
     udp_tx: 6021
-    udp_rx: 6020
+    #udp_rx: 6020
+    udp_rx: 26103
     buffer_size: 65536
   kctrl_connection:
     type: "UDP"
@@ -31,10 +34,10 @@ kongsberg:
   # Data inputs
   sounder_name: EM2040_130
   run_startup: false
-  ship_name: sentry_welltest
-  bist_dir: /home/jvaccaro/welltest/bist/
-  kmall_dir: /home/jvaccaro/welltest/kmall/
-  xml_dir: /home/jvaccaro/welltest/xml/
+  ship_name: asv_ben
+  bist_dir: /home/monster-kitty/Desktop/SharedFolder_ASV_III/bist/
+  kmall_dir: /home/monster-kitty/Desktop/SharedFolder_ASV_III/kmall/
+  xml_dir: /home/monster-kitty/Desktop/SharedFolder_ASV_III/xml/
   max_kmall_buffer_kB: 30
   max_kmall_file_GB: 2
   # Timeouts

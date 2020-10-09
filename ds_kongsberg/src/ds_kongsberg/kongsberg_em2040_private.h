@@ -36,6 +36,7 @@
 
 #include "ds_kongsberg/kongsberg_em2040.h"
 #include <mutex>
+#include "project11_transformations/local_services.h"
 
 namespace ds_kongsberg{
 struct KongsbergEM2040Private{
@@ -57,6 +58,11 @@ struct KongsbergEM2040Private{
   ros::Publisher kssis_pub_;
   ros::Publisher kmstatus_pub_;
   ros::Publisher kmall_record_pub_;
+
+  // TODO: LMD
+  ros::Publisher sounding_xyza_pub_;
+  ros::Publisher pointcloud2_xyza_pub_;
+  project11::Transformations transformation_;
 
   // UDP connection to data stream
   boost::shared_ptr<ds_asio::DsConnection> kmall_conn_;
